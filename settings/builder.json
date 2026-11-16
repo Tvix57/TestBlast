@@ -1,0 +1,13 @@
+{
+  "excludeScenes": [],
+  "orientation": {
+    "landscapeLeft": false,
+    "landscapeRight": false,
+    "portrait": true,
+    "upsideDown": false
+  },
+  "packageName": "com.testblast.prototype",
+  "startScene": "a56eb1d0-7a2b-5d97-aff2-ec57ddffd271",
+  "title": "Blast Prototype",
+  "webOrientation": "portrait"
+}
