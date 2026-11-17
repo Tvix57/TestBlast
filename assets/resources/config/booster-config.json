@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "boosters": [
+    {
+      "kind": "teleport",
+      "charges": 5
+    },
+    {
+      "kind": "bomb",
+      "charges": 3
+    }
+  ]
+}

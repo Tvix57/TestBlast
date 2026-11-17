@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "board": {
+    "columns": 9,
+    "rows": 9,
+    "minGroupSize": 3,
+    "colors": ["blue", "red", "green", "yellow", "purple"]
+  },
+  "match": {
+    "targetScore": 500,
+    "movesLimit": 37,
+    "timeLimitSeconds": 180
+  },
+  "score": {
+    "perTile": 10,
+    "groupBonusStartSize": 4,
+    "groupBonusPerTile": 15,
+    "superTileBonus": 100
+  },
+  "shuffle": {
+    "maxAttempts": 3
+  }
+}
