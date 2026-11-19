@@ -448,6 +448,14 @@
     "tilePrefab": {
       "__uuid__": "d1a0136f-aff7-5a0e-8fbb-7549eb9fbe14"
     },
+    "frameNode": {
+      "__id__": 2
+    },
+    "innerNode": {
+      "__id__": 3
+    },
+    "innerPaddingRatio": 0.35,
+    "frameBorderRatio": 0.4,
     "_id": ""
   },
   {

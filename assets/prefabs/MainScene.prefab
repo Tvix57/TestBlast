@@ -67,8 +67,8 @@
       "__type__": "TypedArray",
       "ctor": "Float64Array",
       "array": [
-        360,
-        640,
+        0,
+        0,
         0,
         0,
         0,
@@ -1816,6 +1816,14 @@
     "tilePrefab": {
       "__uuid__": "d1a0136f-aff7-5a0e-8fbb-7549eb9fbe14"
     },
+    "frameNode": {
+      "__id__": 39
+    },
+    "innerNode": {
+      "__id__": 40
+    },
+    "innerPaddingRatio": 0.35,
+    "frameBorderRatio": 0.4,
     "_id": ""
   },
   {
@@ -2242,7 +2250,7 @@
       "__id__": 1
     },
     "_children": [],
-    "_active": true,
+    "_active": false,
     "_components": [
       {
         "__id__": 64
