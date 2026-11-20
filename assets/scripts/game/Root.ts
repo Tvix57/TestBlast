@@ -1,13 +1,13 @@
 import { IBoosterConfigFile, IGameConfig } from '../core/Config';
 import { ConfigValidator } from '../core/ConfigValidator';
-import { GameSession } from '../core/GameSession';
+import { GameContext } from '../core/GameContext';
 import { IDialogManager } from './dialogs/IDialogManager';
 import { ISceneManager } from './scenes/ISceneManager';
 
 export class Root {
     private static _instance: Root = null;
 
-    private _session: GameSession = null;
+    private _context: GameContext = null;
     private _dialogs: IDialogManager = null;
     private _scenes: ISceneManager = null;
 
@@ -18,8 +18,8 @@ export class Root {
         return Root._instance;
     }
 
-    public get Session(): GameSession {
-        return this._session;
+    public get Context(): GameContext {
+        return this._context;
     }
 
     public ResolveDialogManager(): IDialogManager {
@@ -31,7 +31,7 @@ export class Root {
     }
 
     public get IsReady(): boolean {
-        return this._session !== null;
+        return this._context !== null;
     }
 
     public Initialize(
@@ -44,6 +44,6 @@ export class Root {
         ConfigValidator.ValidateBoosters(boosterConfig);
         this._dialogs = dialogs;
         this._scenes = scenes;
-        this._session = new GameSession(config, boosterConfig);
+        this._context = new GameContext(config, boosterConfig);
     }
 }

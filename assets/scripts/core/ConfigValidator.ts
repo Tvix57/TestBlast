@@ -11,6 +11,7 @@ export class ConfigValidator {
         ConfigValidator.RequireNumber(config.board, 'board.rows', config.board && config.board.rows, 2);
         ConfigValidator.RequireNumber(config.board, 'board.cellGapRatio', config.board && config.board.cellGapRatio, 0);
         ConfigValidator.RequireNumber(config.board, 'board.minGroupSize', config.board && config.board.minGroupSize, 2);
+        ConfigValidator.RequireRange(config.board, 'board.repeatChance', config.board && config.board.repeatChance, 0, 1);
         ConfigValidator.RequireNumber(config.score, 'score.perTile', config.score && config.score.perTile, 1);
         if (!config.board || !config.board.colors || config.board.colors.length < 2) {
             throw new Error('game config: board.colors must contain at least 2 colors');
@@ -104,6 +105,13 @@ export class ConfigValidator {
         ConfigValidator.Require(section, name + ' section');
         if (typeof value !== 'number' || isNaN(value) || value < min) {
             throw new Error(name + ' must be a number >= ' + min);
+        }
+    }
+
+    private static RequireRange(section: any, name: string, value: number, min: number, max: number): void {
+        ConfigValidator.Require(section, name + ' section');
+        if (typeof value !== 'number' || isNaN(value) || value < min || value > max) {
+            throw new Error(name + ' must be a number in [' + min + ', ' + max + ']');
         }
     }
 

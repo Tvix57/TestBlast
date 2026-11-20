@@ -5,6 +5,7 @@
     "rows": 9,
     "cellGapRatio": 0.03,
     "minGroupSize": 3,
+    "repeatChance": 0.4,
     "colors": ["blue", "red", "green", "yellow", "purple"]
   },
   "match": {

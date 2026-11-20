@@ -16,6 +16,8 @@ describe('Валидация конфигов', () => {
         expect(config.board.colors.length).toBeGreaterThanOrEqual(2);
         expect(config.board.columns).toBeGreaterThanOrEqual(2);
         expect(config.board.rows).toBeGreaterThanOrEqual(2);
+        expect(config.board.repeatChance).toBeGreaterThanOrEqual(0);
+        expect(config.board.repeatChance).toBeLessThanOrEqual(1);
         expect(config.shuffle.maxAttempts).toBeGreaterThanOrEqual(1);
         ['swapDuration', 'fallDuration', 'blastDuration', 'spawnDuration'].forEach((key) => {
             expect(typeof config.animation[key]).toBe('number');
@@ -56,6 +58,18 @@ describe('Валидация конфигов', () => {
         const minTimeAboveBase = loadGameConfig();
         minTimeAboveBase.levels.timeLimitMinSeconds = minTimeAboveBase.match.timeLimitSeconds + 1;
         expect(() => ConfigValidator.ValidateGame(minTimeAboveBase)).toThrow(/timeLimitMinSeconds/);
+
+        const repeatAboveOne = loadGameConfig();
+        repeatAboveOne.board.repeatChance = 1.5;
+        expect(() => ConfigValidator.ValidateGame(repeatAboveOne)).toThrow(/repeatChance/);
+
+        const repeatBelowZero = loadGameConfig();
+        repeatBelowZero.board.repeatChance = -0.1;
+        expect(() => ConfigValidator.ValidateGame(repeatBelowZero)).toThrow(/repeatChance/);
+
+        const noRepeatChance = loadGameConfig();
+        delete (noRepeatChance.board as any).repeatChance;
+        expect(() => ConfigValidator.ValidateGame(noRepeatChance)).toThrow(/repeatChance/);
     });
 
     it('шаги сложности знаковые: баланс сам задаёт направление', () => {

@@ -1,12 +1,6 @@
-import { ICell } from './Cell';
-
-export interface IDispatcher<T> {
-    AddHandler(handler: T): void;
-    RemoveHandler(handler: T): void;
-    RemoveAll(): void;
-}
-
-/** Рассылка событий модели подписчикам (контроллеры слоя представления). */
+/**
+ * Рассылка событий модели подписчикам (контроллеры слоя представления).
+ */
 export class Dispatcher<T> {
     private _handlers: T[] = [];
 
@@ -33,7 +27,7 @@ export class Dispatcher<T> {
     }
 }
 
-export abstract class AbstractDispatcher<T> implements IDispatcher<T> {
+export abstract class AbstractDispatcher<T> {
     protected _dispatcher: Dispatcher<T> = new Dispatcher<T>();
 
     public AddHandler(handler: T): void {
@@ -49,5 +43,3 @@ export abstract class AbstractDispatcher<T> implements IDispatcher<T> {
     }
 }
 
-/** Обратный вызов выбора ячейки для слоя представления. */
-export type CellHandler = (cell: ICell) => void;

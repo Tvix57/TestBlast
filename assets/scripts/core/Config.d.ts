@@ -5,6 +5,7 @@ export interface IBoardConfig {
     rows: number;
     cellGapRatio: number;
     minGroupSize: number;
+    repeatChance: number;
     colors: string[];
 }
 

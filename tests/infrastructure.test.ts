@@ -1,5 +1,5 @@
 import { AbstractDispatcher, Dispatcher } from '../assets/scripts/core/Dispatcher';
-import { IRandom, SeededRandom } from '../assets/scripts/core/Random';
+import { Random } from '../assets/scripts/core/Random';
 
 describe('Dispatcher', () => {
     it('рассылает событие всем подписчикам и не дублирует подписку', () => {
@@ -68,30 +68,33 @@ describe('Dispatcher', () => {
     });
 });
 
-describe('SeededRandom', () => {
-    const assertRange = (random: IRandom) => {
-        for (let i = 0; i < 200; i++) {
-            const value = random.Next();
-            expect(value).toBeGreaterThanOrEqual(0);
-            expect(value).toBeLessThan(1);
-        }
-    };
+describe('Random', () => {
+    const series = (count: number): number[] => new Array(count).fill(0).map(() => Random.Next());
 
     it('Next детерминирован при одинаковом сиде', () => {
-        const first = new SeededRandom(123);
-        const second = new SeededRandom(123);
-        expect(new Array(5).fill(0).map(() => first.Next())).toEqual(new Array(5).fill(0).map(() => second.Next()));
+        Random.Reset(123);
+        const first = series(5);
+        Random.Reset(123);
+        const second = series(5);
+        expect(first).toEqual(second);
     });
 
     it('разные сиды дают разные последовательности', () => {
-        expect(new SeededRandom(1).Next()).not.toBe(new SeededRandom(2).Next());
+        Random.Reset(1);
+        const first = Random.Next();
+        Random.Reset(2);
+        expect(first).not.toBe(Random.Next());
     });
 
     it('Next всегда в [0, 1), NextInt в [0, max)', () => {
-        const random = new SeededRandom(99);
-        assertRange(random);
+        Random.Reset(99);
         for (let i = 0; i < 200; i++) {
-            const value = random.NextInt(7);
+            const value = Random.Next();
+            expect(value).toBeGreaterThanOrEqual(0);
+            expect(value).toBeLessThan(1);
+        }
+        for (let i = 0; i < 200; i++) {
+            const value = Random.NextInt(7);
             expect(Number.isInteger(value)).toBe(true);
             expect(value).toBeGreaterThanOrEqual(0);
             expect(value).toBeLessThan(7);
@@ -99,8 +102,16 @@ describe('SeededRandom', () => {
     });
 
     it('NextInt(0) возвращает 0 и не ломает генератор', () => {
-        const random = new SeededRandom(5);
-        expect(random.NextInt(0)).toBe(0);
-        expect(random.Next()).toBeGreaterThanOrEqual(0);
+        Random.Reset(5);
+        expect(Random.NextInt(0)).toBe(0);
+        expect(Random.Next()).toBeGreaterThanOrEqual(0);
+    });
+
+    it('Reset перезапускает последовательность с начала', () => {
+        Random.Reset(7);
+        const first = Random.Next();
+        series(10);
+        Random.Reset(7);
+        expect(Random.Next()).toBe(first);
     });
 });

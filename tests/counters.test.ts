@@ -1,8 +1,5 @@
-import { BoosterInventory, IBoosterHandler } from '../assets/scripts/core/BoosterInventory';
-import { MatchTimer, ITimerHandler } from '../assets/scripts/core/MatchTimer';
 import { MovesCounter, IMovesHandler } from '../assets/scripts/core/MovesCounter';
 import { ScoreCounter, IScoreHandler } from '../assets/scripts/core/ScoreCounter';
-import { loadBoosterConfig } from './helpers';
 
 describe('ScoreCounter', () => {
     it('копит очки и сообщает новое значение подписчику', () => {
