@@ -1,4 +1,6 @@
 {
+  "debug": false,
+  "md5Cache": false,
   "excludeScenes": [],
   "orientation": {
     "landscapeLeft": false,
@@ -7,7 +9,7 @@
     "upsideDown": false
   },
   "packageName": "com.testblast.prototype",
-  "startScene": "a56eb1d0-7a2b-5d97-aff2-ec57ddffd271",
+  "startScene": "a366e6f0-5e45-4d0d-9e26-2062ec0c8d8f",
   "title": "Blast Prototype",
   "webOrientation": "portrait"
 }

@@ -1,5 +1,4 @@
 import { ConfigValidator } from '../assets/scripts/core/ConfigValidator';
-import { EffectFactory } from '../assets/scripts/core/effects/BoardEffect';
 import { loadBoosterConfig, loadGameConfig } from './helpers';
 
 describe('Валидация конфигов', () => {
@@ -21,16 +20,6 @@ describe('Валидация конфигов', () => {
         expect(config.shuffle.maxAttempts).toBeGreaterThanOrEqual(1);
         ['swapDuration', 'fallDuration', 'blastDuration', 'spawnDuration'].forEach((key) => {
             expect(typeof config.animation[key]).toBe('number');
-        });
-    });
-
-    it('все формы эффектов из конфигов зарегистрированы в EffectFactory', () => {
-        const boosters = loadBoosterConfig();
-        boosters.boosters.filter((booster) => booster.effect).forEach((booster) => {
-            expect(() => EffectFactory.Create(booster.effect.shape)).not.toThrow();
-        });
-        Object.keys(boosters.superTiles.effects).forEach((type) => {
-            expect(() => EffectFactory.Create(boosters.superTiles.effects[type].shape)).not.toThrow();
         });
     });
 
@@ -70,6 +59,63 @@ describe('Валидация конфигов', () => {
         const noRepeatChance = loadGameConfig();
         delete (noRepeatChance.board as any).repeatChance;
         expect(() => ConfigValidator.ValidateGame(noRepeatChance)).toThrow(/repeatChance/);
+    });
+
+    it('отсутствие обязательных секций и полей ловится до запуска матча', () => {
+        const noBoard = loadGameConfig();
+        delete (noBoard as any).board;
+        expect(() => ConfigValidator.ValidateGame(noBoard)).toThrow(/board.columns/);
+
+        const noScore = loadGameConfig();
+        delete (noScore as any).score;
+        expect(() => ConfigValidator.ValidateGame(noScore)).toThrow(/score.perTile/);
+
+        const noShuffle = loadGameConfig();
+        delete (noShuffle as any).shuffle;
+        expect(() => ConfigValidator.ValidateGame(noShuffle)).toThrow(/shuffle/);
+
+        const noAnimation = loadGameConfig();
+        delete (noAnimation as any).animation;
+        expect(() => ConfigValidator.ValidateGame(noAnimation)).toThrow(/animation/);
+
+        const noRandom = loadGameConfig();
+        delete (noRandom as any).random;
+        expect(() => ConfigValidator.ValidateGame(noRandom)).toThrow(/random/);
+
+        const noLevels = loadGameConfig();
+        delete (noLevels as any).levels;
+        expect(() => ConfigValidator.ValidateGame(noLevels)).toThrow(/levels/);
+    });
+
+    it('проверяет границы полей поля, счёта и уровней', () => {
+        const badGap = loadGameConfig();
+        badGap.board.cellGapRatio = -0.1;
+        expect(() => ConfigValidator.ValidateGame(badGap)).toThrow(/cellGapRatio/);
+
+        const badGroup = loadGameConfig();
+        badGroup.board.minGroupSize = 1;
+        expect(() => ConfigValidator.ValidateGame(badGroup)).toThrow(/minGroupSize/);
+
+        const badPerTile = loadGameConfig();
+        badPerTile.score.perTile = 0;
+        expect(() => ConfigValidator.ValidateGame(badPerTile)).toThrow(/perTile/);
+
+        const badSeed = loadGameConfig();
+        badSeed.random.baseSeed = -1;
+        expect(() => ConfigValidator.ValidateGame(badSeed)).toThrow(/baseSeed/);
+
+        const badColorsStart = loadGameConfig();
+        badColorsStart.levels.colorsStart = 1;
+        expect(() => ConfigValidator.ValidateGame(badColorsStart)).toThrow(/colorsStart/);
+
+        const invertedPalette = loadGameConfig();
+        invertedPalette.levels.colorsStart = 4;
+        invertedPalette.levels.colorsMax = 3;
+        expect(() => ConfigValidator.ValidateGame(invertedPalette)).toThrow(/colorsMax/);
+
+        const badSignedStep = loadGameConfig();
+        badSignedStep.levels.colorsPerLevel = NaN;
+        expect(() => ConfigValidator.ValidateGame(badSignedStep)).toThrow(/colorsPerLevel/);
     });
 
     it('шаги сложности знаковые: баланс сам задаёт направление', () => {

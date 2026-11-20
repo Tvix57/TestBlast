@@ -23,7 +23,7 @@ export class MovesCounter extends AbstractDispatcher<IMovesHandler> {
     public Configure(limit: number): void {
         this._limit = Math.max(0, limit);
         this._left = this._limit;
-        this.Post();
+        this.post();
     }
 
     public CanSpend(): boolean {
@@ -35,15 +35,15 @@ export class MovesCounter extends AbstractDispatcher<IMovesHandler> {
             return;
         }
         this._left--;
-        this.Post();
+        this.post();
     }
 
     public Reset(): void {
         this._left = this._limit;
-        this.Post();
+        this.post();
     }
 
-    private Post(): void {
+    private post(): void {
         this._dispatcher.Post((handler) => handler.OnMovesChanged(this._left, this._limit));
     }
 }

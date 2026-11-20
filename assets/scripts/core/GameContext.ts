@@ -10,7 +10,7 @@ export class GameContext {
     constructor(config: IGameConfig, boosterConfig: IBoosterConfigFile, baseSeed?: number) {
         this._levelBuilder = new GameLevelBuilder(config, baseSeed);
         this._boosterConfig = boosterConfig;
-        this._session = this.Open(1, 0);
+        this._session = this.open(1, 0);
     }
 
     public get Session(): GameSession {
@@ -22,14 +22,14 @@ export class GameContext {
     }
 
     public NextLevel(): GameSession {
-        return this.Open(this._session.Level + 1, 0);
+        return this.open(this._session.Level + 1, 0);
     }
 
     public RestartLevel(): GameSession {
-        return this.Open(this._session.Level, this._session.FieldVariant + 1);
+        return this.open(this._session.Level, this._session.FieldVariant + 1);
     }
 
-    private Open(level: number, fieldVariant: number): GameSession {
+    private open(level: number, fieldVariant: number): GameSession {
         const setup: ILevelSetup = this._levelBuilder.Resolve(level, fieldVariant);
         this._session = GameSession.Create(setup.Config, this._boosterConfig, setup);
         return this._session;

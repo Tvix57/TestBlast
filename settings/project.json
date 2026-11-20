@@ -9,16 +9,16 @@
     "default"
   ],
   "start-scene": "a366e6f0-5e45-4d0d-9e26-2062ec0c8d8f",
-  "design-resolution-width": 960,
-  "design-resolution-height": 640,
-  "fit-width": false,
+  "design-resolution-width": 720,
+  "design-resolution-height": 1280,
+  "fit-width": true,
   "fit-height": true,
   "use-project-simulator-setting": false,
   "simulator-orientation": false,
   "use-customize-simulator": false,
   "simulator-resolution": {
-    "width": 960,
-    "height": 640
+    "width": 720,
+    "height": 1280
   },
   "last-module-event-record-time": 0,
   "assets-sort-type": "name",

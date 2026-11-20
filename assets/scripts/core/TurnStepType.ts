@@ -1,11 +1,10 @@
-import { IBlastStep, ICollapseStep, IRefillStep, IShuffleStep, ISwapStep } from './TurnResult';
+import { IBlastStep, IDropTilesStep, IRefillStep, IShuffleStep } from './TurnResult';
 
 export enum TurnStepType {
     Blast = 'blast',
-    Collapse = 'collapse',
+    DropTiles = 'droptiles',
     Refill = 'refill',
-    Shuffle = 'shuffle',
-    Swap = 'swap'
+    Shuffle = 'shuffle'
 }
 
-export type ITurnStep = IBlastStep | ICollapseStep | IRefillStep | IShuffleStep | ISwapStep;
+export type ITurnStep = IBlastStep | IDropTilesStep | IRefillStep | IShuffleStep;

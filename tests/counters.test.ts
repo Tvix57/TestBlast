@@ -84,4 +84,28 @@ describe('MovesCounter', () => {
 
         expect(moves.Left).toBe(5);
     });
+
+    it('Limit отдаёт текущий лимит и меняется через Configure', () => {
+        const moves = new MovesCounter();
+        moves.Configure(3);
+        expect(moves.Limit).toBe(3);
+
+        moves.Configure(7);
+
+        expect(moves.Limit).toBe(7);
+        expect(moves.Left).toBe(7);
+    });
+
+    it('Spend на нуле не рассылает лишнее событие', () => {
+        const moves = new MovesCounter();
+        moves.Configure(1);
+        moves.Spend();
+        const handler = { OnMovesChanged: jest.fn() };
+        moves.AddHandler(handler);
+
+        moves.Spend();
+
+        expect(moves.Left).toBe(0);
+        expect(handler.OnMovesChanged).not.toHaveBeenCalled();
+    });
 });

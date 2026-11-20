@@ -18,7 +18,7 @@ export class DialogManagerComponent extends cc.Component implements IDialogManag
 
     public OpenDialog(dialogType: DialogType, options: IDialogOptions = {}): boolean {
         const prefab = this.dialogPrefabs ? this.dialogPrefabs[dialogType] : null;
-        if (!prefab || this.IsOpen(dialogType)) {
+        if (!prefab || this.isOpen(dialogType)) {
             return false;
         }
 
@@ -30,7 +30,7 @@ export class DialogManagerComponent extends cc.Component implements IDialogManag
         }
 
         view.SetOpenInfo(dialogType, options);
-        view.SetOnCloseRequest(() => this.CloseDialogView(view));
+        view.SetOnCloseRequest(() => this.closeDialogView(view));
         try {
             if (options.Configure) {
                 options.Configure(view);
@@ -41,10 +41,10 @@ export class DialogManagerComponent extends cc.Component implements IDialogManag
         }
         this.node.addChild(node);
 
-        const wasPaused = this.IsPaused();
+        const wasPaused = this.isPaused();
         this._dialogStack.push(view);
         view.Show();
-        this.SyncPause(wasPaused);
+        this.syncPause(wasPaused);
         if (options.OnOpen) {
             options.OnOpen(dialogType);
         }
@@ -52,7 +52,7 @@ export class DialogManagerComponent extends cc.Component implements IDialogManag
     }
 
     public CloseTopDialog(): boolean {
-        return this.CloseDialogView(this._dialogStack[this._dialogStack.length - 1]);
+        return this.closeDialogView(this._dialogStack[this._dialogStack.length - 1]);
     }
 
     public CloseAllDialogs(): void {
@@ -60,65 +60,65 @@ export class DialogManagerComponent extends cc.Component implements IDialogManag
         if (views.length === 0) {
             return;
         }
-        const wasPaused = this.IsPaused();
+        const wasPaused = this.isPaused();
         this._dialogStack.length = 0;
         views.forEach((view) => {
             view.MarkClosing();
-            this.DestroyView(view);
+            this.destroyView(view);
         });
-        this.SyncPause(wasPaused);
-        views.forEach((view) => this.NotifyClose(view));
+        this.syncPause(wasPaused);
+        views.forEach((view) => this.notifyClose(view));
     }
 
     public SetPauseHandler(handler: (paused: boolean) => void): void {
         this._pauseHandler = handler;
-        if (handler && this.IsPaused()) {
+        if (handler && this.isPaused()) {
             handler(true);
         }
     }
 
-    private CloseDialogView(view: DialogView): boolean {
+    private closeDialogView(view: DialogView): boolean {
         if (!view || this._dialogStack.indexOf(view) < 0 || !view.MarkClosing()) {
             return false;
         }
-        view.Hide(() => this.FinishClose(view));
+        view.Hide(() => this.finishClose(view));
         return true;
     }
 
-    private FinishClose(view: DialogView): void {
+    private finishClose(view: DialogView): void {
         const index = this._dialogStack.indexOf(view);
         if (index < 0) {
             return;
         }
-        const wasPaused = this.IsPaused();
+        const wasPaused = this.isPaused();
         this._dialogStack.splice(index, 1);
-        this.DestroyView(view);
-        this.SyncPause(wasPaused);
-        this.NotifyClose(view);
+        this.destroyView(view);
+        this.syncPause(wasPaused);
+        this.notifyClose(view);
     }
 
-    private IsOpen(dialogType: DialogType): boolean {
+    private isOpen(dialogType: DialogType): boolean {
         return this._dialogStack.some((view) => view.Type === dialogType);
     }
 
-    private IsPaused(): boolean {
+    private isPaused(): boolean {
         return this._dialogStack.some((view) => view.Options.PauseGame === true);
     }
 
-    private SyncPause(wasPaused: boolean): void {
-        const paused = this.IsPaused();
+    private syncPause(wasPaused: boolean): void {
+        const paused = this.isPaused();
         if (paused !== wasPaused && this._pauseHandler) {
             this._pauseHandler(paused);
         }
     }
 
-    private NotifyClose(view: DialogView): void {
+    private notifyClose(view: DialogView): void {
         if (view.Options.OnClose) {
             view.Options.OnClose(view.Type);
         }
     }
 
-    private DestroyView(view: DialogView): void {
+    private destroyView(view: DialogView): void {
         view.StopAnimations();
         const node = view.node;
         if (!node || !node.isValid) {

@@ -33,7 +33,7 @@ export class SceneManagerComponent extends cc.Component implements ISceneManager
     public OpenScene(sceneType: SceneType, layout: number): cc.Node {
         const node = cc.instantiate(this.scenePrefabs[sceneType]);
         node.setPosition(0, 0, 0);
-        this.CloseByLayout(layout);
+        this.closeByLayout(layout);
         this.node.addChild(node);
         this._sceneStack.push({ Type: sceneType, Layout: layout, Node: node });
         return node;
@@ -44,7 +44,7 @@ export class SceneManagerComponent extends cc.Component implements ISceneManager
         if (!entry) {
             return false;
         }
-        this.DestroyNode(entry.Node);
+        this.destroyNode(entry.Node);
         return true;
     }
 
@@ -62,7 +62,7 @@ export class SceneManagerComponent extends cc.Component implements ISceneManager
         return this._sceneStack.length > 0 ? this._sceneStack[this._sceneStack.length - 1].Node : null;
     }
 
-    private CloseByLayout(layout: number): void {
+    private closeByLayout(layout: number): void {
         while (this._sceneStack.length > 0) {
             const top = this._sceneStack[this._sceneStack.length - 1];
             if (top.Layout > layout) {
@@ -72,7 +72,7 @@ export class SceneManagerComponent extends cc.Component implements ISceneManager
         }
     }
 
-    private DestroyNode(node: cc.Node): void {
+    private destroyNode(node: cc.Node): void {
         if (!node || !node.isValid) {
             return;
         }

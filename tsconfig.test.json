@@ -10,5 +10,6 @@
     "noEmit": true,
     "isolatedModules": true
   },
-  "include": ["assets/scripts/core/**/*.ts", "tests/**/*.ts"]
+  "include": ["creator.d.ts", "assets/scripts/core/**/*.ts", "tests/**/*.ts"],
+  "exclude": ["node_modules", "library", "local", "temp", "build", "settings"]
 }
