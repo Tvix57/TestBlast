@@ -402,13 +402,12 @@ export function createTileView() {
 }
 
 /** Фейк Cocos-вида поля: порты отрисовки `IBoardStage` без `cc`. */
-export function createBoardStage(options: { width?: number; height?: number; scale?: number } = {}) {
+export function createBoardStage(options: { width?: number; height?: number } = {}) {
     const stage = {
         GridSize: {
             width: options.width === undefined ? 990 : options.width,
             height: options.height === undefined ? 990 : options.height
         },
-        Scale: options.scale === undefined ? 1 : options.scale,
         Created: [] as any[],
         Released: [] as any[],
         ClearCount: 0,
@@ -426,9 +425,6 @@ export function createBoardStage(options: { width?: number; height?: number; sca
         },
         GetGridSize(): { width: number; height: number } {
             return stage.GridSize;
-        },
-        GetScale(): number {
-            return stage.Scale;
         },
         ReportError(message: string): void {
             stage.Errors.push(message);

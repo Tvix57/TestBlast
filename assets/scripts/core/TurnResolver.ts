@@ -88,9 +88,6 @@ export class TurnResolver {
         if (!booster || !cells || cells.length === 0) {
             return this.rejected();
         }
-        if (!this._boosters.CanSpend(type)) {
-            return this.rejected();
-        }
         if (booster.targeting === BoosterTargeting.Pair) {
             return this.usePairBooster(booster, cells);
         }

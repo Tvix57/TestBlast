@@ -8,8 +8,10 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck:assets": "tsc -p tsconfig.assets.json --noEmit",
+    "typecheck:test": "tsc -p tsconfig.test.json --noEmit",
     "assets:check": "python3 tools/validate-assets.py",
-    "verify": "npm run typecheck && npm test && npm run assets:check"
+    "verify": "npm run typecheck:assets && npm run typecheck:test && npm test && npm run assets:check"
   },
   "devDependencies": {
     "@types/jest": "^29.5.12",

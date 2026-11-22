@@ -9,15 +9,15 @@ import {
 
 const groupOfThree = withCells(checkerboard(), [[4, 3, 'B'], [4, 4, 'B'], [4, 5, 'B']]);
 
-function createScene(options: { width?: number; height?: number; scale?: number } = {}) {
+function createScene(options: { width?: number; height?: number } = {}) {
     const game = createGame({ seed: 11 });
     game.Start();
     const stage = createBoardStage(options);
-    const controller = new BoardController(stage as any, game.Board, game.Config.animation);
+    const controller = new BoardController(stage, game.Board, game.Config.animation);
     return { game, stage, controller };
 }
 
-async function buildScene(options: { width?: number; height?: number; scale?: number } = {}) {
+async function buildScene(options: { width?: number; height?: number } = {}) {
     const scene = createScene(options);
     await scene.controller.Build();
     return scene;
@@ -28,7 +28,7 @@ describe('BoardController: поле без `cc`', () => {
         const game = createGame({ seed: 11 });
         game.Start();
         const stage = createBoardStage();
-        const controller = new BoardController(stage as any, game.Board, game.Config.animation);
+        const controller = new BoardController(stage, game.Board, game.Config.animation);
         const handler = jest.fn();
         controller.SetClickHandler(handler);
         const placements = game.Board.GetPlacements();
@@ -49,19 +49,19 @@ describe('BoardController: поле без `cc`', () => {
         expect(handler).toHaveBeenCalledWith(placements[0].Cell);
     });
 
-    it('раскладка считается по размеру зоны и масштабу ноды поля', async () => {
+    it('раскладка считается по локальному размеру ноды поля', async () => {
         const game = createGame({ seed: 11 });
         game.Start();
-        const stage = createBoardStage({ width: 990, height: 990, scale: 2 });
-        const controller = new BoardController(stage as any, game.Board, game.Config.animation);
+        const stage = createBoardStage({ width: 990, height: 990 });
+        const controller = new BoardController(stage, game.Board, game.Config.animation);
 
         await controller.Build();
 
         const expected = BoardLayout.Fit(game.Board.Rows, game.Board.Columns, stage.GridSize, game.Board.CellGapRatio);
         const view = stage.Created[0];
-        expect(view.SetCellSize).toHaveBeenLastCalledWith(expected.cellSize / 2);
+        expect(view.SetCellSize).toHaveBeenLastCalledWith(expected.cellSize);
         expect(view.Position).toEqual(BoardLayout.Position(
-            game.Board.Rows, game.Board.Columns, expected.step / 2, view.Cell.Row, view.Cell.Col
+            game.Board.Rows, game.Board.Columns, expected.step, view.Cell.Row, view.Cell.Col
         ));
     });
 
@@ -69,7 +69,7 @@ describe('BoardController: поле без `cc`', () => {
         const game = createGame({ seed: 11 });
         startWithBoard(game, groupOfThree);
         const stage = createBoardStage();
-        const controller = new BoardController(stage as any, game.Board, game.Config.animation);
+        const controller = new BoardController(stage, game.Board, game.Config.animation);
         await controller.Build();
 
         const result = game.ClickCell(4, 4);

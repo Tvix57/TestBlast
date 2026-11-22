@@ -1,12 +1,7 @@
 import { AnimationUtil } from '../assets/scripts/game/ui/AnimationUtil';
 
-interface IFakeNode {
-    isValid: boolean;
-    x: number;
-    y: number;
-}
-
-function fakeNode(isValid: boolean = true): IFakeNode {
+/** Фейк ноды: AnimationUtil читает только `isValid` и `x`, остальное — контракт cc.Node. */
+function fakeNode(isValid: boolean = true): any {
     return { isValid: isValid, x: 10, y: 20 };
 }
 
@@ -21,7 +16,7 @@ function neverFinishingTween(): any {
 
 describe('AnimationUtil: один активный промис анимации узла', () => {
     it('новый Begin завершает предыдущий промис', () => {
-        const node = fakeNode() as any;
+        const node = fakeNode();
         const first = jest.fn();
         const second = jest.fn();
 
@@ -34,7 +29,7 @@ describe('AnimationUtil: один активный промис анимации
     });
 
     it('Finish завершает ровно один раз и очищает состояние', () => {
-        const node = fakeNode() as any;
+        const node = fakeNode();
         const done = jest.fn();
 
         AnimationUtil.Begin(node, done);
@@ -46,14 +41,14 @@ describe('AnimationUtil: один активный промис анимации
     });
 
     it('Play резолвится, когда твин завершился', async () => {
-        const node = fakeNode() as any;
+        const node = fakeNode();
 
         await expect(AnimationUtil.Play(node, () => cc.tween(node))).resolves.toBeUndefined();
         expect(AnimationUtil.IsPending(node)).toBe(false);
     });
 
     it('Select отменяет незавершённый Play — промис не зависает', async () => {
-        const node = fakeNode() as any;
+        const node = fakeNode();
         const pending = AnimationUtil.Play(node, neverFinishingTween);
         expect(AnimationUtil.IsPending(node)).toBe(true);
 
@@ -64,7 +59,7 @@ describe('AnimationUtil: один активный промис анимации
     });
 
     it('Cancel завершает промис даже на невалидном узле', async () => {
-        const node = fakeNode(false) as any;
+        const node = fakeNode(false);
         const pending = AnimationUtil.Play(node, neverFinishingTween);
 
         AnimationUtil.Cancel(node);
@@ -73,15 +68,15 @@ describe('AnimationUtil: один активный промис анимации
     });
 
     it('PlayShake резолвится и не оставляет активный промис', async () => {
-        const node = fakeNode() as any;
+        const node = fakeNode();
 
         await expect(AnimationUtil.PlayShake(node, 8, 0.18)).resolves.toBeUndefined();
         expect(AnimationUtil.IsPending(node)).toBe(false);
     });
 
     it('узлы не мешают друг другу', () => {
-        const first = fakeNode() as any;
-        const second = fakeNode() as any;
+        const first = fakeNode();
+        const second = fakeNode();
         const firstResolve = jest.fn();
         const secondResolve = jest.fn();
 

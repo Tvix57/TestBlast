@@ -17,7 +17,7 @@ export class DialogView extends cc.Component implements IDialogView {
     private _type: DialogType = DialogType.StartDialog;
     private _options: IDialogOptions = {};
     private _onConfirm: () => void = null;
-    private _onCloseRequest: () => void = null;
+    private _onCloseRequest: ((onClosed?: () => void) => void) | null = null;
     private _handled: boolean = false;
     private _closing: boolean = false;
     private _closeOnBackground: boolean = false;
@@ -77,7 +77,7 @@ export class DialogView extends cc.Component implements IDialogView {
         this._onConfirm = callback;
     }
 
-    public SetOnCloseRequest(callback: () => void): void {
+    public SetOnCloseRequest(callback: (onClosed?: () => void) => void): void {
         this._onCloseRequest = callback;
     }
 
@@ -134,12 +134,12 @@ export class DialogView extends cc.Component implements IDialogView {
         }
     }
 
-    public Close(): void {
+    public Close(onClosed?: () => void): void {
         if (this._onCloseRequest) {
-            this._onCloseRequest();
+            this._onCloseRequest(onClosed);
             return;
         }
-        this.Hide();
+        this.Hide(onClosed);
     }
 
     public StopAnimations(): void {
@@ -158,10 +158,11 @@ export class DialogView extends cc.Component implements IDialogView {
         }
         this._handled = true;
         const callback = this._onConfirm;
-        this.Close();
-        if (callback) {
-            callback();
-        }
+        this.Close(() => {
+            if (callback) {
+                callback();
+            }
+        });
     }
 
     private onMaskClick(event: cc.Event.EventTouch): void {

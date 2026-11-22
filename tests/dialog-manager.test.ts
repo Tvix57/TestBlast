@@ -52,4 +52,25 @@ describe('DialogManagerComponent: обработчик паузы снимает
 
         expect(handler).toHaveBeenCalledTimes(1);
     });
+
+    it('колбэк «после закрытия» вызывается после анимации Hide', () => {
+        const manager = new DialogManagerComponent();
+        const order: string[] = [];
+        const view: any = {
+            Type: 0,
+            Options: {},
+            MarkClosing: () => true,
+            StopAnimations: () => undefined,
+            Hide: (onHidden: () => void) => {
+                order.push('hide');
+                onHidden();
+            },
+            node: null
+        };
+        pushView(manager, view);
+
+        (manager as any).closeDialogView(view, () => order.push('closed'));
+
+        expect(order).toEqual(['hide', 'closed']);
+    });
 });

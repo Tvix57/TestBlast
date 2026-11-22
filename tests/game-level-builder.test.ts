@@ -296,4 +296,20 @@ describe('GameLevelBuilder: сложность растёт от уровня', 
             expect(setup.Config.board.colors).toContain(placement.Tile.Type);
         });
     });
+
+    it('конфиг уровня не делит секции с исходным конфигом', () => {
+        const source = loadGameConfig();
+        const levelBuilder = new GameLevelBuilder(source, BASE_SEED);
+        const setup = levelBuilder.Resolve(2, 0);
+
+        setup.Config.score.perTile = 999;
+        setup.Config.levels.colorsMax = 99;
+        setup.Config.animation.swapDuration = 99;
+        setup.Config.shuffle.maxAttempts = 99;
+
+        expect(source.score.perTile).not.toBe(999);
+        expect(source.levels.colorsMax).not.toBe(99);
+        expect(source.animation.swapDuration).not.toBe(99);
+        expect(source.shuffle.maxAttempts).not.toBe(99);
+    });
 });

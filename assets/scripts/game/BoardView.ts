@@ -148,8 +148,7 @@ export class BoardView extends cc.Component implements IBoardView, IBoardStage {
     public GetGridSize(): IBoardZoneSize {
         const size = this.boardNode ? this.boardNode.getContentSize() : null;
         if (size && size.width > 0 && size.height > 0) {
-            const scale = this.GetScale();
-            return { width: size.width * scale, height: size.height * scale };
+            return { width: size.width, height: size.height };
         }
         const zone = this.node.getContentSize();
         if (zone.width > 0 && zone.height > 0) {
@@ -157,16 +156,6 @@ export class BoardView extends cc.Component implements IBoardView, IBoardStage {
         }
         const visible = cc.view.getVisibleSize();
         return { width: visible.width, height: visible.height };
-    }
-
-    public GetScale(): number {
-        let scale = 1;
-        let node = this.boardNode;
-        while (node && node !== this.node) {
-            scale *= node.scaleX;
-            node = node.parent;
-        }
-        return isFinite(scale) && scale > 0 ? scale : 1;
     }
 
     public ReportError(message: string): void {

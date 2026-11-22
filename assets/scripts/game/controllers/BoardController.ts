@@ -343,14 +343,8 @@ export class BoardController {
         if (!board) {
             return;
         }
-        const scale = this._stage.GetScale();
         const metrics = BoardLayout.Fit(board.Rows, board.Columns, this._stage.GetGridSize(), board.CellGapRatio);
-        this._metrics = {
-            cellSize: metrics.cellSize / scale,
-            step: metrics.step / scale,
-            boardWidth: metrics.boardWidth / scale,
-            boardHeight: metrics.boardHeight / scale
-        };
+        this._metrics = metrics;
     }
 
     private positionOf(row: number, col: number): IBoardPosition {

@@ -6,6 +6,5 @@ export interface IBoardStage {
     ReleaseTileView(view: TileView): void;
     ClearTiles(): void;
     GetGridSize(): IBoardZoneSize;
-    GetScale(): number;
     ReportError(message: string): void;
 }

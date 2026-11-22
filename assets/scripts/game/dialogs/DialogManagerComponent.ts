@@ -31,7 +31,7 @@ export class DialogManagerComponent extends cc.Component implements IDialogManag
         }
 
         view.SetOpenInfo(dialogType, options);
-        view.SetOnCloseRequest(() => this.closeDialogView(view));
+        view.SetOnCloseRequest((onClosed) => this.closeDialogView(view, onClosed));
         try {
             if (options.Configure) {
                 options.Configure(view);
@@ -84,11 +84,16 @@ export class DialogManagerComponent extends cc.Component implements IDialogManag
         }
     }
 
-    private closeDialogView(view: DialogView): boolean {
+    private closeDialogView(view: DialogView, onClosed?: () => void): boolean {
         if (!view || this._dialogStack.indexOf(view) < 0 || !view.MarkClosing()) {
             return false;
         }
-        view.Hide(() => this.finishClose(view));
+        view.Hide(() => {
+            this.finishClose(view);
+            if (onClosed) {
+                onClosed();
+            }
+        });
         return true;
     }
 
