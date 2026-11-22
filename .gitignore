@@ -52,3 +52,7 @@ Thumbs.db
 
 # автотесты
 coverage/
+
+# python
+__pycache__/
+*.pyc

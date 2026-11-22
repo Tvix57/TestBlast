@@ -1,8 +1,9 @@
+import { GameResult, GameState } from '../assets/scripts/core/GameResult';
 import { TileType } from '../assets/scripts/core/Tile';
 import { IBlastStep } from '../assets/scripts/core/TurnResult';
 import { TurnStepType } from '../assets/scripts/core/TurnStepType';
 import {
-    checkerboard, createGame, expectedChainPoints, loadGameConfig, startWithBoard, withCells
+    checkerboard, createGame, expectedChainPoints, loadGameConfig, setBoard, startWithBoard, withCells
 } from './helpers';
 
 const gameConfig = loadGameConfig();
@@ -101,5 +102,27 @@ describe('Супер-тайлы: активация', () => {
             expect.objectContaining({ Row: 8, Col: 6 })
         ]));
         expect(blast.Chain).toHaveLength(8);
+    });
+});
+
+describe('Супер-тайлы: доступность хода', () => {
+    it('поле без цветных групп, но с супер-тайлом не завершает матч поражением', () => {
+        const game = createGame({ movesLimit: 5, targetScore: 100000 });
+        startWithBoard(game, withCells(checkerboard(), [
+            [4, 3, 'B'], [4, 4, 'B'], [4, 5, 'B'], [0, 0, '1']
+        ]));
+        jest.spyOn(game.Board, 'Refill').mockImplementation(() => {
+            setBoard(game.Board, withCells(checkerboard(), [[0, 0, '1']]));
+            return [];
+        });
+
+        const result = game.ClickCell(4, 4);
+
+        expect(result.Accepted).toBe(true);
+        expect(game.State).toBe(GameState.Playing);
+        expect(result.Result).toBe(GameResult.None);
+        expect(result.Steps.map((step) => step.Type)).not.toContain(TurnStepType.Shuffle);
+        expect(game.Board.HasClickableSuper()).toBe(true);
+        expect(game.Board.HasAvailableMove(game.Config.board.minGroupSize)).toBe(true);
     });
 });

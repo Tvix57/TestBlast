@@ -212,6 +212,9 @@
     "_components": [
       {
         "__id__": 22
+      },
+      {
+        "__id__": 26
       }
     ],
     "_prefab": {
@@ -971,5 +974,15 @@
     },
     "fileId": "",
     "sync": false
+  },
+  {
+    "__type__": "cc.BlockInputEvents",
+    "_name": "",
+    "_objFlags": 0,
+    "node": {
+      "__id__": 5
+    },
+    "_enabled": true,
+    "_id": ""
   }
 ]

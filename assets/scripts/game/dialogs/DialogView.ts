@@ -21,6 +21,7 @@ export class DialogView extends cc.Component implements IDialogView {
     private _handled: boolean = false;
     private _closing: boolean = false;
     private _closeOnBackground: boolean = false;
+    private _confirmButton: cc.Button | null = null;
 
     protected onLoad(): void {
         if (this.mask) {
@@ -32,6 +33,28 @@ export class DialogView extends cc.Component implements IDialogView {
         if (this.mask && this.mask.isValid) {
             this.mask.off(cc.Node.EventType.TOUCH_END, this.onMaskClick, this);
         }
+        this.UnbindConfirmButton();
+    }
+
+    protected BindConfirmButton(button: cc.Button | null): void {
+        this.UnbindConfirmButton();
+        if (!button || !button.node) {
+            return;
+        }
+        this._confirmButton = button;
+        button.node.on('click', this.onConfirmClick, this);
+    }
+
+    protected UnbindConfirmButton(): void {
+        const button = this._confirmButton;
+        this._confirmButton = null;
+        if (button && button.node && button.node.isValid) {
+            button.node.off('click', this.onConfirmClick, this);
+        }
+    }
+
+    protected onConfirmClick(): void {
+        this.confirm();
     }
 
     public get Type(): DialogType {
@@ -145,14 +168,10 @@ export class DialogView extends cc.Component implements IDialogView {
         if (!this._closeOnBackground) {
             return;
         }
-        if (this.panel) {
-            const point = event.getLocation();
-            const rect = this.panel.getBoundingBoxToWorld();
-            const inside = point.x >= rect.x && point.x <= rect.x + rect.width &&
-                point.y >= rect.y && point.y <= rect.y + rect.height;
-            if (inside) {
-                return;
-            }
+
+        const target = event.target as cc.Node | null;
+        if (this.panel && target && (target === this.panel || target.isChildOf(this.panel))) {
+            return;
         }
         this.Close();
     }

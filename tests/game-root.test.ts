@@ -5,7 +5,19 @@ import {
 
 describe('Root: точка инициализации приложения', () => {
     beforeEach(() => {
-        (Root as any)._instance = null;
+        Root.Instance.Reset();
+    });
+
+    it('повторный Initialize без Reset запрещён', () => {
+        Root.Instance.Initialize(loadGameConfig(), loadBoosterConfig(), loadFieldConfigs(), createDialogManager(), createSceneManager());
+
+        expect(() => Root.Instance.Initialize(loadGameConfig(), loadBoosterConfig(), loadFieldConfigs(), createDialogManager(), createSceneManager()))
+            .toThrow(/Initialize уже вызван/);
+
+        Root.Instance.Reset();
+
+        expect(() => Root.Instance.Initialize(loadGameConfig(), loadBoosterConfig(), loadFieldConfigs(), createDialogManager(), createSceneManager()))
+            .not.toThrow();
     });
 
     it('до Initialize контекст и менеджеры недоступны', () => {
@@ -38,15 +50,15 @@ describe('Root: точка инициализации приложения', () 
         const field = loadFieldConfig();
         field.custom = true;
         field.rows = 2;
-        field.columns = 2;
-        field.board = [[0, 1], [1, 0]];
+        field.columns = 3;
+        field.board = [[0, 0, 0], [1, 0, 1]];
 
         Root.Instance.Initialize(loadGameConfig(), loadBoosterConfig(), [field], createDialogManager(), createSceneManager());
 
         const board = Root.Instance.Context.Session.Config.board;
         expect(board.rows).toBe(2);
-        expect(board.columns).toBe(2);
-        expect(board.cells).toEqual([[0, 1], [1, 0]]);
+        expect(board.columns).toBe(3);
+        expect(board.cells).toEqual([[0, 0, 0], [1, 0, 1]]);
     });
 
     it('битый game-config не оставляет Root в готовом состоянии', () => {
@@ -75,10 +87,13 @@ describe('Root: точка инициализации приложения', () 
         expect(Root.Instance.IsReady).toBe(false);
     });
 
-    it('повторная Initialize заменяет контекст и менеджеры', () => {
+    it('Reset позволяет инициализировать Root заново с новыми менеджерами', () => {
         const firstDialogs = createDialogManager();
         const firstScenes = createSceneManager();
         Root.Instance.Initialize(loadGameConfig(), loadBoosterConfig(), loadFieldConfigs(), firstDialogs, firstScenes);
+        expect(Root.Instance.ResolveDialogManager()).toBe(firstDialogs);
+
+        Root.Instance.Reset();
 
         const secondDialogs = createDialogManager();
         const secondScenes = createSceneManager();

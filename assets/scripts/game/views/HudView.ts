@@ -1,10 +1,11 @@
 import { GameSession } from '../../core/GameSession';
 import { HudController } from '../controllers/HudController';
+import { IHudView } from '../IHudView';
 
 const { ccclass, property } = cc._decorator;
 
 @ccclass
-export class HudView extends cc.Component {
+export class HudView extends cc.Component implements IHudView {
     @property(cc.Label)
     public scoreLabel: cc.Label | null = null;
 

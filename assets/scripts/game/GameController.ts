@@ -133,7 +133,12 @@ export class GameController {
             this._boardView.Unlock();
             this.notifyFinished();
         };
-        this._boardView.PlaySteps(result.Steps).then(done, done);
+        this._boardView.PlaySteps(result.Steps).then(done, (error) => {
+            if (typeof cc !== 'undefined' && cc.error) {
+                cc.error('GameController: ошибка анимации хода: ' + error);
+            }
+            done();
+        });
     }
 
     private notifyFinished(): void {

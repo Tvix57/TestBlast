@@ -278,6 +278,51 @@ describe('Валидация конфигов', () => {
         expect(() => ConfigValidator.ValidateBoosters(unknownSuper)).toThrow(/unknown super tile type/);
     });
 
+    it('поле, где группа недостижима, отклоняется при известном minGroupSize', () => {
+        const isolated = loadFieldConfig();
+        isolated.custom = true;
+        isolated.rows = 5;
+        isolated.columns = 5;
+        isolated.board = [
+            [0, 1, 0, 1, 0],
+            [1, 1, 1, 1, 1],
+            [0, 1, 0, 1, 0],
+            [1, 1, 1, 1, 1],
+            [0, 1, 0, 1, 0]
+        ];
+
+        expect(() => ConfigValidator.ValidateField(isolated, 'field config[1]', 3))
+            .toThrow(/largest playable area 1 is smaller than board\.minGroupSize 3/);
+    });
+
+    it('поле с областью нужного размера проходит проверку', () => {
+        const pairs = loadFieldConfig();
+        pairs.custom = true;
+        pairs.rows = 2;
+        pairs.columns = 4;
+        pairs.board = [[0, 0, 1, 1], [0, 0, 1, 1]];
+
+        expect(() => ConfigValidator.ValidateField(pairs, 'field config', 2)).not.toThrow();
+        expect(() => ConfigValidator.ValidateField(pairs, 'field config', 5))
+            .toThrow(/largest playable area 4/);
+    });
+
+    it('стандартное поле проверяется по площади', () => {
+        const tiny = loadFieldConfig();
+        tiny.rows = 2;
+        tiny.columns = 2;
+
+        expect(() => ConfigValidator.ValidateField(tiny, 'field config', 3)).not.toThrow();
+        expect(() => ConfigValidator.ValidateField(tiny, 'field config', 5))
+            .toThrow(/largest playable area 4/);
+    });
+
+    it('конфиги проекта проходят проверку с minGroupSize из game-config', () => {
+        const game = loadGameConfig();
+
+        expect(() => ConfigValidator.ValidateFields(loadFieldConfigs(), game.board.minGroupSize)).not.toThrow();
+    });
+
     it('валидатор не мутирует конфиг', () => {
         const config = loadGameConfig();
         const snapshot = JSON.parse(JSON.stringify(config));
@@ -285,5 +330,74 @@ describe('Валидация конфигов', () => {
         ConfigValidator.ValidateGame(config);
 
         expect(config).toEqual(snapshot);
+    });
+
+    it('score: обязательные бонусные поля проверяются', () => {
+        const negativeBonus = loadGameConfig();
+        negativeBonus.score.groupBonusPerTile = -1;
+        expect(() => ConfigValidator.ValidateGame(negativeBonus)).toThrow(/groupBonusPerTile/);
+
+        const negativeSuper = loadGameConfig();
+        negativeSuper.score.superTileBonus = -5;
+        expect(() => ConfigValidator.ValidateGame(negativeSuper)).toThrow(/superTileBonus/);
+
+        const noStart = loadGameConfig();
+        delete (noStart.score as any).groupBonusStartSize;
+        expect(() => ConfigValidator.ValidateGame(noStart)).toThrow(/groupBonusStartSize/);
+    });
+
+    it('shuffle.maxAttempts должен быть целым >= 1', () => {
+        const zero = loadGameConfig();
+        zero.shuffle.maxAttempts = 0;
+        expect(() => ConfigValidator.ValidateGame(zero)).toThrow(/maxAttempts/);
+
+        const fractional = loadGameConfig();
+        fractional.shuffle.maxAttempts = 1.5;
+        expect(() => ConfigValidator.ValidateGame(fractional)).toThrow(/maxAttempts/);
+    });
+
+    it('animation: каждая длительность — число >= 0, easing непустой', () => {
+        const negativeSwap = loadGameConfig();
+        negativeSwap.animation.swapDuration = -0.1;
+        expect(() => ConfigValidator.ValidateGame(negativeSwap)).toThrow(/animation\.swapDuration/);
+
+        const noBlast = loadGameConfig();
+        delete (noBlast.animation as any).blastDuration;
+        expect(() => ConfigValidator.ValidateGame(noBlast)).toThrow(/animation\.blastDuration/);
+
+        const noEasing = loadGameConfig();
+        noEasing.animation.fallEasing = '';
+        expect(() => ConfigValidator.ValidateGame(noEasing)).toThrow(/fallEasing/);
+    });
+
+    it('board.colors не должен содержать дубликатов', () => {
+        const duplicate = loadGameConfig();
+        duplicate.board.colors = [duplicate.board.colors[0], duplicate.board.colors[0]];
+
+        expect(() => ConfigValidator.ValidateGame(duplicate)).toThrow(/duplicates/);
+    });
+
+    it('version обязателен в game- и booster-конфиге', () => {
+        const noGameVersion = loadGameConfig();
+        delete (noGameVersion as any).version;
+        expect(() => ConfigValidator.ValidateGame(noGameVersion)).toThrow(/version/);
+
+        const noBoosterVersion = loadBoosterConfig();
+        delete (noBoosterVersion as any).version;
+        expect(() => ConfigValidator.ValidateBoosters(noBoosterVersion)).toThrow(/version/);
+    });
+
+    it('бустеры: дубликаты типов и неизвестные формы отклоняются', () => {
+        const duplicate = loadBoosterConfig();
+        duplicate.boosters.push({ ...duplicate.boosters[0] });
+        expect(() => ConfigValidator.ValidateBoosters(duplicate)).toThrow(/duplicate types/);
+
+        const badShape = loadBoosterConfig();
+        badShape.boosters[1].effect.shape = 'rhombus';
+        expect(() => ConfigValidator.ValidateBoosters(badShape)).toThrow(/unknown shape "rhombus"/);
+
+        const badSuperShape = loadBoosterConfig();
+        badSuperShape.superTiles.effects.bomb.shape = 'spiral';
+        expect(() => ConfigValidator.ValidateBoosters(badSuperShape)).toThrow(/unknown shape "spiral"/);
     });
 });

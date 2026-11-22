@@ -1,19 +1,22 @@
+import { BoosterType } from './BoosterTypes';
 import { IBoosterConfig, IBoosterConfigFile, IEffectConfig } from './Config';
 import { TileType } from './Tile';
 
-export enum BoosterType {
-    Teleport = 'teleport',
-    Bomb = 'bomb'
-}
+export { BoosterTargeting, BoosterType } from './BoosterTypes';
 
-export enum BoosterTargeting {
-    Cell = 'cell',
-    Pair = 'pair'
-}
-
-/** Правила бустеров и супер-тайлов из booster-config.json. */
 export class BoosterRules {
-    constructor(private _config: IBoosterConfigFile) {}
+    private _byType: Map<BoosterType, IBoosterConfig> = new Map();
+    private _effects: Map<string, IEffectConfig> = new Map();
+
+    constructor(private _config: IBoosterConfigFile) {
+        (this._config.boosters || []).forEach((booster) => {
+            if (booster && booster.type && !this._byType.has(booster.type)) {
+                this._byType.set(booster.type, booster);
+            }
+        });
+        const effects = (this._config.superTiles && this._config.superTiles.effects) || {};
+        Object.keys(effects).forEach((type) => this._effects.set(type, effects[type]));
+    }
 
     public get Config(): IBoosterConfigFile {
         return this._config;
@@ -24,15 +27,11 @@ export class BoosterRules {
     }
 
     public GetBooster(type: BoosterType): IBoosterConfig {
-        const found = this._config.boosters.filter((booster) => booster.type === type);
-        return found.length > 0 ? found[0] : null;
+        return this._byType.get(type) || null;
     }
 
     public GetSuperEffect(type: TileType): IEffectConfig {
-        if (!this._config.superTiles || !this._config.superTiles.effects) {
-            return null;
-        }
-        return this._config.superTiles.effects[type] || null;
+        return this._effects.get(type) || null;
     }
 
     public GetSpawnTypes(groupSize: number): TileType[] {
@@ -45,6 +44,6 @@ export class BoosterRules {
                 matched = rule.types;
             }
         });
-        return matched;
+        return matched.slice();
     }
 }

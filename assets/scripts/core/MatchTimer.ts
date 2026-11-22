@@ -80,7 +80,10 @@ export class MatchTimer extends AbstractDispatcher<ITimerHandler> {
     }
 
     public Expire(): void {
-        if (!this.IsEnabled || this._remaining <= 0) {
+        if (!this.IsEnabled) {
+            return;
+        }
+        if (!this._running && this._remaining <= 0) {
             return;
         }
         this._remaining = 0;

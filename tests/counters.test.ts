@@ -75,12 +75,12 @@ describe('MovesCounter', () => {
         expect(moves.Left).toBe(0);
     });
 
-    it('Reset возвращает исходный остаток', () => {
+    it('Configure возвращает исходный остаток', () => {
         const moves = new MovesCounter();
         moves.Configure(5);
         moves.Spend();
 
-        moves.Reset();
+        moves.Configure(5);
 
         expect(moves.Left).toBe(5);
     });

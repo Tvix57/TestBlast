@@ -1,5 +1,6 @@
 import { DialogType, IDialogManager, IDialogOptions } from './IDialogManager';
 import { DialogView } from './DialogView';
+import { NodeUtil } from '../ui/NodeUtil';
 
 const { ccclass, property } = cc._decorator;
 
@@ -126,13 +127,6 @@ export class DialogManagerComponent extends cc.Component implements IDialogManag
 
     private destroyView(view: DialogView): void {
         view.StopAnimations();
-        const node = view.node;
-        if (!node || !node.isValid) {
-            return;
-        }
-        if (node.parent) {
-            node.removeFromParent();
-        }
-        node.destroy();
+        NodeUtil.Destroy(view.node);
     }
 }

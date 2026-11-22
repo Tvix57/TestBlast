@@ -207,9 +207,7 @@ describe('BoardController: поле без `cc`', () => {
         await controller.PlaySteps([{
             Type: TurnStepType.Swap,
             First: first.Cell,
-            Second: second.Cell,
-            FirstTile: first.Tile,
-            SecondTile: second.Tile
+            Second: second.Cell
         } as any]);
 
         expect(first.Cell).toEqual(expect.objectContaining({ Row: 0, Col: 2 }));

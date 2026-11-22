@@ -142,9 +142,10 @@ export class Board {
         const visited = new Set<number>();
         const result: ICell[] = [];
         const queue: ICell[] = [start];
-        while (queue.length > 0) {
-            const cell = queue.shift();
-            const key = cell.Row * this.Columns + cell.Col;
+        let head = 0;
+        while (head < queue.length) {
+            const cell = queue[head++];
+            const key = Cell.Key(cell.Row, cell.Col, this.Columns);
             if (visited.has(key) || !cell.Tile || !cell.Tile.IsMatchable || cell.Tile.Type !== type) {
                 continue;
             }
@@ -160,6 +161,22 @@ export class Board {
 
     public HasGroup(minGroupSize: number): boolean {
         return this.FindFirstGroup(minGroupSize).length > 0;
+    }
+
+    public HasClickableSuper(): boolean {
+        for (let row = 0; row < this.Rows; row++) {
+            for (let col = 0; col < this.Columns; col++) {
+                const cell = this._cells[row][col];
+                if (Cell.CanHoldTile(cell) && cell.Tile && cell.Tile.IsSuper) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public HasAvailableMove(minGroupSize: number): boolean {
+        return this.HasGroup(minGroupSize) || this.HasClickableSuper();
     }
 
     public FindFirstGroup(minGroupSize: number): ICell[] {
@@ -297,7 +314,7 @@ export class Board {
 
     private pushNeighbour(queue: ICell[], visited: Set<number>, row: number, col: number): void {
         const cell = this.GetCell(row, col);
-        if (!cell || !Cell.CanHoldTile(cell) || visited.has(row * this.Columns + col)) {
+        if (!cell || !Cell.CanHoldTile(cell) || visited.has(Cell.Key(row, col, this.Columns))) {
             return;
         }
         queue.push(cell);

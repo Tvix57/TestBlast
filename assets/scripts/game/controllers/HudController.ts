@@ -2,13 +2,13 @@ import { GameSession } from '../../core/GameSession';
 import { IMovesHandler } from '../../core/MovesCounter';
 import { ITimerHandler } from '../../core/MatchTimer';
 import { IScoreHandler } from '../../core/ScoreCounter';
-import { HudView } from '../views/HudView';
+import { IHudView } from '../IHudView';
 
 export class HudController implements IScoreHandler, IMovesHandler, ITimerHandler {
-    private _view: HudView;
+    private _view: IHudView;
     private _session: GameSession;
 
-    constructor(view: HudView, session: GameSession) {
+    constructor(view: IHudView, session: GameSession) {
         this._view = view;
         this._session = session;
 
@@ -39,14 +39,10 @@ export class HudController implements IScoreHandler, IMovesHandler, ITimerHandle
 
     private sync(): void {
         const session = this._session;
-        const moves = session.Moves;
-        const configured = moves.IsEnabled;
-        const limit = configured ? moves.Limit : session.Config.match.movesLimit;
-        const left = configured ? moves.Left : limit;
 
         this._view.SetTarget(session.TargetScore);
         this._view.SetScore(session.Score.Get());
-        this._view.SetMoves(left, limit);
+        this._view.SetMoves(session.Moves.Left, session.Moves.Limit);
         this._view.SetTime(session.Timer.Remaining, session.Timer.Limit);
     }
 }

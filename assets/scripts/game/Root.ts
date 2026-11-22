@@ -35,6 +35,12 @@ export class Root {
         return this._context !== null;
     }
 
+    public Reset(): void {
+        this._context = null;
+        this._dialogs = null;
+        this._scenes = null;
+    }
+
     public Initialize(
         config: IGameConfig,
         boosterConfig: IBoosterConfigFile,
@@ -42,9 +48,12 @@ export class Root {
         dialogs: IDialogManager,
         scenes: ISceneManager
     ): void {
+        if (this._context) {
+            throw new Error('Root: Initialize уже вызван (сначала Reset)');
+        }
         ConfigValidator.ValidateGame(config);
         ConfigValidator.ValidateBoosters(boosterConfig);
-        ConfigValidator.ValidateFields(fieldConfigs);
+        ConfigValidator.ValidateFields(fieldConfigs, config.board.minGroupSize);
         const fields = fieldConfigs.map((fieldConfig) => FieldLayout.FromConfig(fieldConfig, config.board));
         this._dialogs = dialogs;
         this._scenes = scenes;

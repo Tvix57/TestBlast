@@ -18,15 +18,10 @@ export class StartDialogView extends DialogView {
 
     protected onLoad(): void {
         super.onLoad();
-        if (this.playButton) {
-            this.playButton.node.on('click', this.onPlayClick, this);
-        }
+        this.BindConfirmButton(this.playButton);
     }
 
     protected onDestroy(): void {
-        if (this.playButton && this.playButton.node) {
-            this.playButton.node.off('click', this.onPlayClick, this);
-        }
         super.onDestroy();
     }
 
@@ -40,9 +35,5 @@ export class StartDialogView extends DialogView {
         if (this.playLabel) {
             this.playLabel.string = buttonTitle;
         }
-    }
-
-    private onPlayClick(): void {
-        this.confirm();
     }
 }

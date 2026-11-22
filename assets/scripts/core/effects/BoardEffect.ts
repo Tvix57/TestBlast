@@ -89,6 +89,10 @@ export class EffectFactory {
         board: new WholeBoardEffect()
     };
 
+    public static KnownShapes(): string[] {
+        return Object.keys(EffectFactory._effects);
+    }
+
     public static Register(shape: string, effect: IBoardEffect): void {
         EffectFactory._effects[shape] = effect;
     }

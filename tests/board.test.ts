@@ -211,3 +211,34 @@ describe('Board: поиск группы', () => {
         expect(board.HasGroup(config.board.minGroupSize)).toBe(false);
     });
 });
+
+describe('Board: доступность хода', () => {
+    const config = loadGameConfig();
+
+    it('HasClickableSuper различает супер-тайл и обычные цвета', () => {
+        const board = createBoard(config);
+        setBoard(board, checkerboard());
+
+        expect(board.HasClickableSuper()).toBe(false);
+
+        board.SetTile(0, 0, board.CreateTile(TileType.Bomb));
+
+        expect(board.HasClickableSuper()).toBe(true);
+        expect(board.HasAvailableMove(config.board.minGroupSize)).toBe(true);
+    });
+
+    it('HasAvailableMove учитывает и цветную группу', () => {
+        const board = createBoard(config);
+        setBoard(board, withCells(checkerboard(), [[4, 3, 'B'], [4, 4, 'B'], [4, 5, 'B']]));
+
+        expect(board.HasClickableSuper()).toBe(false);
+        expect(board.HasAvailableMove(config.board.minGroupSize)).toBe(true);
+    });
+
+    it('HasAvailableMove ложно на шахматке без групп и суперов', () => {
+        const board = createBoard(config);
+        setBoard(board, checkerboard());
+
+        expect(board.HasAvailableMove(config.board.minGroupSize)).toBe(false);
+    });
+});

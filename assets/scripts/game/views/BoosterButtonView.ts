@@ -1,4 +1,5 @@
 import { BoosterType } from '../../core/BoosterRules';
+import { AnimationUtil } from '../ui/AnimationUtil';
 
 const { ccclass, property } = cc._decorator;
 
@@ -18,11 +19,6 @@ export class BoosterButtonView extends cc.Component {
 
     private _type: BoosterType | null = null;
     private _clickHandler: (type: BoosterType) => void = null;
-    private _selectedScale: number = 1.08;
-
-    public get Type(): BoosterType | null {
-        return this._type;
-    }
 
     public Setup(type: BoosterType, clickHandler: (type: BoosterType) => void): void {
         this._type = type;
@@ -45,20 +41,11 @@ export class BoosterButtonView extends cc.Component {
     }
 
     public SetSelected(selected: boolean): void {
-        cc.Tween.stopAllByTarget(this.node);
-        cc.tween(this.node).to(0.12, { scale: selected ? this._selectedScale : 1 }, { easing: 'quadOut' }).start();
+        AnimationUtil.Select(this.node, selected);
     }
 
     public PlayUnavailable(): void {
-        const startX = this.node.x;
-        cc.tween(this.node)
-            .by(0.06, { position: cc.v3(8, 0, 0) })
-            .by(0.06, { position: cc.v3(-16, 0, 0) })
-            .by(0.06, { position: cc.v3(8, 0, 0) })
-            .call(() => {
-                this.node.x = startX;
-            })
-            .start();
+        AnimationUtil.PlayShake(this.node, 8, 0.18);
     }
 
     protected onDestroy(): void {
