@@ -1,10 +1,115 @@
 import { ConfigValidator } from '../assets/scripts/core/ConfigValidator';
-import { loadBoosterConfig, loadGameConfig } from './helpers';
+import { loadBoosterConfig, loadFieldConfig, loadFieldConfigs, loadGameConfig } from './helpers';
 
 describe('Валидация конфигов', () => {
     it('конфиги проекта проходят проверку', () => {
         expect(() => ConfigValidator.ValidateGame(loadGameConfig())).not.toThrow();
         expect(() => ConfigValidator.ValidateBoosters(loadBoosterConfig())).not.toThrow();
+        expect(() => ConfigValidator.ValidateField(loadFieldConfig())).not.toThrow();
+        expect(() => ConfigValidator.ValidateFields(loadFieldConfigs())).not.toThrow();
+    });
+
+    it('конфиг поля: стандартное поле и фигурное поле заданной формы', () => {
+        const standard = loadFieldConfig();
+        expect(standard.custom).toBe(false);
+        expect(standard.rows).toBeGreaterThanOrEqual(2);
+        expect(standard.columns).toBeGreaterThanOrEqual(2);
+
+        const shaped = loadFieldConfig();
+        shaped.custom = true;
+        shaped.rows = 3;
+        shaped.columns = 3;
+        shaped.board = [[0, 1, 0], [0, 0, 0], [0, 1, 0]];
+        expect(() => ConfigValidator.ValidateField(shaped)).not.toThrow();
+    });
+
+    it('битый конфиг поля даёт понятную ошибку', () => {
+        const badRows = loadFieldConfig();
+        badRows.rows = 1;
+        expect(() => ConfigValidator.ValidateField(badRows)).toThrow(/field config: rows/);
+
+        const noCustom = loadFieldConfig();
+        delete (noCustom as any).custom;
+        expect(() => ConfigValidator.ValidateField(noCustom)).toThrow(/custom must be a boolean/);
+
+        const noBoard = loadFieldConfig();
+        noBoard.custom = true;
+        expect(() => ConfigValidator.ValidateField(noBoard)).toThrow(/board is missing/);
+
+        const shortMatrix = loadFieldConfig();
+        shortMatrix.custom = true;
+        shortMatrix.rows = 3;
+        shortMatrix.columns = 3;
+        shortMatrix.board = [[0, 0, 0], [0, 0, 0]];
+        expect(() => ConfigValidator.ValidateField(shortMatrix)).toThrow(/must contain 3 rows/);
+
+        const unknownType = loadFieldConfig();
+        unknownType.custom = true;
+        unknownType.rows = 2;
+        unknownType.columns = 3;
+        unknownType.board = [[0, 0, 0], [0, 0, 7]];
+        expect(() => ConfigValidator.ValidateField(unknownType)).toThrow(/unknown cell type 7/);
+
+        const noPlayable = loadFieldConfig();
+        noPlayable.custom = true;
+        noPlayable.rows = 2;
+        noPlayable.columns = 2;
+        noPlayable.board = [[1, 1], [1, 1]];
+        expect(() => ConfigValidator.ValidateField(noPlayable)).toThrow(/no playable cells/);
+
+        const badRowLength = loadFieldConfig();
+        badRowLength.custom = true;
+        badRowLength.rows = 2;
+        badRowLength.columns = 3;
+        badRowLength.board = [[0, 0, 0], [0, 0]];
+        expect(() => ConfigValidator.ValidateField(badRowLength)).toThrow(/board row 1 must contain 3 numbers/);
+
+        const stringRows = loadFieldConfig();
+        stringRows.custom = true;
+        stringRows.rows = 2;
+        stringRows.columns = 3;
+        (stringRows as any).board = ['...', '...'];
+        expect(() => ConfigValidator.ValidateField(stringRows)).toThrow(/board row 0 must contain 3 numbers/);
+
+        const notMatrix = loadFieldConfig();
+        notMatrix.custom = true;
+        (notMatrix as any).board = '...';
+        expect(() => ConfigValidator.ValidateField(notMatrix)).toThrow(/board must be a matrix/);
+
+        const emptyBoard = loadFieldConfig();
+        emptyBoard.custom = true;
+        emptyBoard.board = [];
+        expect(() => ConfigValidator.ValidateField(emptyBoard)).toThrow(/board is missing/);
+
+        const fractionalRows = loadFieldConfig();
+        fractionalRows.rows = 2.5;
+        expect(() => ConfigValidator.ValidateField(fractionalRows)).toThrow(/must be an integer >= 2/);
+
+        const infiniteColumns = loadFieldConfig();
+        infiniteColumns.columns = Infinity;
+        expect(() => ConfigValidator.ValidateField(infiniteColumns)).toThrow(/must be an integer >= 2/);
+    });
+
+    it('field-config — непустой массив вариантов, ошибка указывает индекс', () => {
+        expect(() => ConfigValidator.ValidateFields([])).toThrow(/list of field variants is empty/);
+        expect(() => (ConfigValidator as any).ValidateFields('not a list')).toThrow(/list of field variants is empty/);
+
+        const variants = loadFieldConfigs();
+        variants[1].rows = 1;
+        expect(() => ConfigValidator.ValidateFields(variants)).toThrow(/field config\[1\]: rows/);
+    });
+
+    it('валидатор поля не мутирует конфиг', () => {
+        const field = loadFieldConfig();
+        field.custom = true;
+        field.rows = 2;
+        field.columns = 2;
+        field.board = [[0, 1], [1, 0]];
+        const snapshot = JSON.parse(JSON.stringify(field));
+
+        ConfigValidator.ValidateField(field);
+
+        expect(field).toEqual(snapshot);
     });
 
     it('значения конфига в допустимых пределах', () => {
@@ -18,7 +123,7 @@ describe('Валидация конфигов', () => {
         expect(config.board.repeatChance).toBeGreaterThanOrEqual(0);
         expect(config.board.repeatChance).toBeLessThanOrEqual(1);
         expect(config.shuffle.maxAttempts).toBeGreaterThanOrEqual(1);
-        ['swapDuration', 'fallDuration', 'blastDuration', 'spawnDuration'].forEach((key) => {
+        ['fallDuration', 'blastDuration', 'spawnDuration', 'boardAppearStagger'].forEach((key) => {
             expect(typeof config.animation[key]).toBe('number');
         });
     });
@@ -59,6 +164,18 @@ describe('Валидация конфигов', () => {
         const noRepeatChance = loadGameConfig();
         delete (noRepeatChance.board as any).repeatChance;
         expect(() => ConfigValidator.ValidateGame(noRepeatChance)).toThrow(/repeatChance/);
+
+        const noStagger = loadGameConfig();
+        delete (noStagger.animation as any).boardAppearStagger;
+        expect(() => ConfigValidator.ValidateGame(noStagger)).toThrow(/boardAppearStagger/);
+
+        const negativeStagger = loadGameConfig();
+        negativeStagger.animation.boardAppearStagger = -0.01;
+        expect(() => ConfigValidator.ValidateGame(negativeStagger)).toThrow(/boardAppearStagger/);
+
+        const stringStagger = loadGameConfig();
+        (stringStagger.animation as any).boardAppearStagger = '0.012';
+        expect(() => ConfigValidator.ValidateGame(stringStagger)).toThrow(/boardAppearStagger/);
     });
 
     it('отсутствие обязательных секций и полей ловится до запуска матча', () => {
@@ -116,6 +233,10 @@ describe('Валидация конфигов', () => {
         const badSignedStep = loadGameConfig();
         badSignedStep.levels.colorsPerLevel = NaN;
         expect(() => ConfigValidator.ValidateGame(badSignedStep)).toThrow(/colorsPerLevel/);
+
+        const fractionalBoard = loadGameConfig();
+        fractionalBoard.board.rows = 9.5;
+        expect(() => ConfigValidator.ValidateGame(fractionalBoard)).toThrow(/board.rows must be an integer/);
     });
 
     it('шаги сложности знаковые: баланс сам задаёт направление', () => {

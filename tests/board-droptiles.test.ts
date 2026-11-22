@@ -14,7 +14,7 @@ describe('Board: падение и дозаполнение', () => {
         expect(moves).toHaveLength(4);
         expect(board.GetTile(1, 0).Id).toBe(fallingId);
         expect(board.GetTile(0, 0)).toBeNull();
-        expect(moves[0].To).toEqual({ Row: 4, Col: 0 });
+        expect(moves[0].To).toMatchObject({ Row: 4, Col: 0 });
     });
 
     it('DropTiles на полном поле не возвращает перемещений', () => {
@@ -56,9 +56,9 @@ describe('Board: падение и дозаполнение', () => {
         expect(spawns).toHaveLength(2);
         expect(countTiles(board)).toBe(config.board.columns * config.board.rows);
         spawns.forEach((spawn) => expect(spawn.FromRow).toBeLessThan(0));
-        expect(spawns.map((spawn) => spawn.Cell)).toEqual([
-            { Row: 0, Col: 2 },
-            { Row: 1, Col: 2 }
+        expect(spawns.map((spawn) => [spawn.Cell.Row, spawn.Cell.Col])).toEqual([
+            [0, 2],
+            [1, 2]
         ]);
     });
 
@@ -68,7 +68,7 @@ describe('Board: падение и дозаполнение', () => {
         const firstId = board.GetTile(0, 0).Id;
         const secondId = board.GetTile(0, 1).Id;
 
-        board.Swap({ Row: 0, Col: 0 }, { Row: 0, Col: 1 });
+        board.Swap(board.GetCell(0, 0), board.GetCell(0, 1));
 
         expect(board.GetTile(0, 0).Id).toBe(secondId);
         expect(board.GetTile(0, 1).Id).toBe(firstId);

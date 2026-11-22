@@ -2,7 +2,9 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import { Board } from '../assets/scripts/core/Board';
-import { IBoosterConfigFile, IGameConfig } from '../assets/scripts/core/Config';
+import { CeilType } from '../assets/scripts/core/Cell';
+import { IBoosterConfigFile, IFieldConfig, IFieldConfigFile, IGameConfig } from '../assets/scripts/core/Config';
+import { FieldLayout, IFieldLayout } from '../assets/scripts/core/FieldLayout';
 import { GameContext } from '../assets/scripts/core/GameContext';
 import { GameLevelBuilder } from '../assets/scripts/core/GameLevelBuilder';
 import { GameSession } from '../assets/scripts/core/GameSession';
@@ -15,6 +17,16 @@ const CONFIG_DIR = path.join(__dirname, '../assets/resources/config');
 /** Реальные конфиги проекта: тесты проверяют то, что реально поставляется. */
 export function loadGameConfig(): IGameConfig {
     return JSON.parse(fs.readFileSync(path.join(CONFIG_DIR, 'game-config.json'), 'utf8'));
+}
+
+/** Все варианты формы поля из `field-config.json`. */
+export function loadFieldConfigs(): IFieldConfigFile {
+    return JSON.parse(fs.readFileSync(path.join(CONFIG_DIR, 'field-config.json'), 'utf8'));
+}
+
+/** Первый вариант поля: для тестов, которым важна не форма, а остальная логика. */
+export function loadFieldConfig(): IFieldConfig {
+    return loadFieldConfigs()[0];
 }
 
 /** Конфиг бустеров: сейчас читается только валидатором в Root, механика вырезана. */
@@ -57,6 +69,8 @@ export interface IGameOptions {
     targetScore?: number;
     maxAttempts?: number;
     clock?: () => number;
+    /** Конфиг поля: по умолчанию берётся `field-config.json` проекта. */
+    field?: IFieldConfig;
 }
 
 export function createGame(options: IGameOptions = {}): GameSession {
@@ -70,11 +84,32 @@ export function createGame(options: IGameOptions = {}): GameSession {
         config.shuffle.maxAttempts = options.maxAttempts;
     }
     config.random.baseSeed = options.seed === undefined ? 7 : options.seed;
+    applyField(config, options.field === undefined ? loadFieldConfig() : options.field);
     return GameSession.Create(config, loadBoosterConfig(), {
         Level: 1,
         FieldVariant: 0,
         Seed: config.random.baseSeed
     }, options.clock || modelClock);
+}
+
+export function fieldLayout(config: IGameConfig = loadGameConfig(), field: IFieldConfig = loadFieldConfig()): IFieldLayout {
+    return FieldLayout.FromConfig(field, config.board);
+}
+
+/** Все варианты раскладок в порядке `field-config.json`. */
+export function fieldLayouts(
+    config: IGameConfig = loadGameConfig(),
+    fields: IFieldConfig[] = loadFieldConfigs()
+): IFieldLayout[] {
+    return fields.map((field) => FieldLayout.FromConfig(field, config.board));
+}
+
+/** Переносит размеры и типы клеток из конфига поля в конфиг доски. */
+export function applyField(config: IGameConfig, field: IFieldConfig): void {
+    const layout = fieldLayout(config, field);
+    config.board.rows = layout.Rows;
+    config.board.columns = layout.Columns;
+    config.board.cells = layout.Types;
 }
 
 /** Поле без готовых групп: соседние клетки всегда разных цветов. */
@@ -228,6 +263,33 @@ export function createBoard(config: IGameConfig, seed: number = 7): Board {
     return new Board(config.board);
 }
 
+/**
+ * ASCII-маска → конфиг кастомного поля: `#` — блок, остальные символы — обычная ячейка.
+ * В самом конфиге используются числа из enum `CeilType`, маска нужна только тестам.
+ */
+export function fieldFromMask(mask: string[]): IFieldConfig {
+    return {
+        version: 1,
+        rows: mask.length,
+        columns: mask[0].length,
+        custom: true,
+        board: mask.map((line) => line.split('').map((symbol) => (
+            symbol === '#' ? CeilType.Blocked : CeilType.Normal
+        )))
+    };
+}
+
+/**
+ * Доска по ASCII-маске: `#` — заблокированная ячейка, всё остальное — обычная.
+ * Размеры строк/столбцов берутся из маски.
+ */
+export function createFieldBoard(lines: string[], seed: number = 7): Board {
+    const config = loadGameConfig();
+    applyField(config, fieldFromMask(lines));
+    Random.Reset(seed);
+    return new Board(config.board);
+}
+
 export function fillColors(repeatChance: number, seed: number): string[] {
     const config = loadGameConfig();
     config.board.repeatChance = repeatChance;
@@ -245,7 +307,8 @@ export function colorsOfSeed(seed: number): string {
 }
 
 export function createBuilder(baseSeed?: number): GameLevelBuilder {
-    return new GameLevelBuilder(loadGameConfig(), baseSeed);
+    const config = loadGameConfig();
+    return new GameLevelBuilder(config, baseSeed, fieldLayouts(config));
 }
 
 export function createLevelGame(baseSeed: number, level: number, fieldVariant: number): GameSession {
@@ -256,21 +319,100 @@ export function createLevelGame(baseSeed: number, level: number, fieldVariant: n
 }
 
 export function createTestContext(baseSeed: number = 4242): GameContext {
-    return new GameContext(loadGameConfig(), loadBoosterConfig(), baseSeed);
+    const config = loadGameConfig();
+    return new GameContext(config, loadBoosterConfig(), fieldLayouts(config), baseSeed);
 }
 
 // --- Фейки видов и контроллеров ---
 
 export function createBoardView() {
     return {
-        SetSelected: jest.fn(),
-        Build: jest.fn(),
+        Init: jest.fn(),
+        SetClickHandler: jest.fn(),
+        Build: jest.fn(() => Promise.resolve()),
         Lock: jest.fn(),
         Unlock: jest.fn(),
-        PlayInvalid: jest.fn(),
+        PlayInvalid: jest.fn(() => Promise.resolve()),
         PlaySteps: jest.fn(() => Promise.resolve())
     };
 }
+
+/** Фейк вида тайла: считает позиции и отдаёт управляемые промисы анимаций. */
+export function createTileView() {
+    const view: any = {
+        isValid: true,
+        Cell: null,
+        Tile: null,
+        ClickHandler: null,
+        Position: { x: 0, y: 0 },
+        PlaceAt: jest.fn((x: number, y: number) => {
+            view.Position = { x: x, y: y };
+        }),
+        SetCellSize: jest.fn(),
+        SetTile: jest.fn((tile: any, cell: any) => {
+            view.Tile = tile;
+            view.Cell = cell;
+        }),
+        SetCell: jest.fn((cell: any) => {
+            view.Cell = cell;
+        }),
+        ResetVisual: jest.fn(),
+        ClearBinding: jest.fn(() => {
+            view.Tile = null;
+            view.Cell = null;
+        }),
+        CancelAnimations: jest.fn(),
+        PlayAppear: jest.fn(() => Promise.resolve()),
+        PlayBlast: jest.fn(() => Promise.resolve()),
+        MoveTo: jest.fn(() => Promise.resolve()),
+        PlaySpawnFall: jest.fn(() => Promise.resolve()),
+        PlayShuffleMove: jest.fn(() => Promise.resolve()),
+        PlayInvalid: jest.fn(() => Promise.resolve())
+    };
+    return view;
+}
+
+/** Фейк Cocos-вида поля: порты отрисовки `IBoardStage` без `cc`. */
+export function createBoardStage(options: { width?: number; height?: number; scale?: number } = {}) {
+    const stage = {
+        GridSize: {
+            width: options.width === undefined ? 990 : options.width,
+            height: options.height === undefined ? 990 : options.height
+        },
+        Scale: options.scale === undefined ? 1 : options.scale,
+        Created: [] as any[],
+        Released: [] as any[],
+        ClearCount: 0,
+        Errors: [] as string[],
+        CreateTileView(): any {
+            const view = createTileView();
+            stage.Created.push(view);
+            return view;
+        },
+        ReleaseTileView(view: any): void {
+            stage.Released.push(view);
+        },
+        ClearTiles(): void {
+            stage.ClearCount++;
+        },
+        GetGridSize(): { width: number; height: number } {
+            return stage.GridSize;
+        },
+        GetScale(): number {
+            return stage.Scale;
+        },
+        ReportError(message: string): void {
+            stage.Errors.push(message);
+        }
+    };
+    return stage;
+}
+
+/** Вид, зарегистрированный на клетке: поиск по координатам среди созданных фейком. */
+export function findTileViewAt(stage: ReturnType<typeof createBoardStage>, row: number, col: number) {
+    return stage.Created.filter((view) => view.Cell && view.Cell.Row === row && view.Cell.Col === col)[0];
+}
+
 
 export function flushPromises(): Promise<void> {
     return new Promise((resolve) => setImmediate(resolve));
@@ -291,6 +433,7 @@ export function createDeferred<T>(): IDeferred<T> {
 
 export function createHudView() {
     return {
+        Bind: jest.fn(),
         SetTarget: jest.fn(),
         SetScore: jest.fn(),
         SetMoves: jest.fn(),
@@ -303,7 +446,8 @@ export function createDialogManager(): IDialogManager {
         OpenDialog: jest.fn(() => true),
         CloseTopDialog: jest.fn(() => true),
         CloseAllDialogs: jest.fn(),
-        SetPauseHandler: jest.fn()
+        SetPauseHandler: jest.fn(),
+        ClearPauseHandler: jest.fn()
     };
 }
 

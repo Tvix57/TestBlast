@@ -1,5 +1,6 @@
 import { BoosterTargeting, BoosterType } from './BoosterRules';
-import { IBoosterConfigFile, IGameConfig } from './Config';
+import { Cell, CeilType } from './Cell';
+import { IBoosterConfigFile, IFieldConfig, IFieldConfigFile, IGameConfig } from './Config';
 
 export class ConfigValidator {
     public static ValidateGame(config: IGameConfig): void {
@@ -7,8 +8,8 @@ export class ConfigValidator {
         ConfigValidator.requireNumber(config.match, 'match.targetScore', config.match && config.match.targetScore, 1);
         ConfigValidator.requireNumber(config.match, 'match.movesLimit', config.match && config.match.movesLimit, 0);
         ConfigValidator.requireNumber(config.match, 'match.timeLimitSeconds', config.match && config.match.timeLimitSeconds, 0);
-        ConfigValidator.requireNumber(config.board, 'board.columns', config.board && config.board.columns, 2);
-        ConfigValidator.requireNumber(config.board, 'board.rows', config.board && config.board.rows, 2);
+        ConfigValidator.requireInteger(config.board, 'board.columns', config.board && config.board.columns, 2);
+        ConfigValidator.requireInteger(config.board, 'board.rows', config.board && config.board.rows, 2);
         ConfigValidator.requireNumber(config.board, 'board.cellGapRatio', config.board && config.board.cellGapRatio, 0);
         ConfigValidator.requireNumber(config.board, 'board.minGroupSize', config.board && config.board.minGroupSize, 2);
         ConfigValidator.requireRange(config.board, 'board.repeatChance', config.board && config.board.repeatChance, 0, 1);
@@ -22,8 +23,14 @@ export class ConfigValidator {
         if (!config.animation) {
             throw new Error('game config: animation section is missing');
         }
+        ConfigValidator.validateAnimation(config);
         ConfigValidator.validateRandom(config);
         ConfigValidator.validateLevels(config);
+    }
+
+    private static validateAnimation(config: IGameConfig): void {
+        const animation = config.animation;
+        ConfigValidator.requireNumber(animation, 'animation.boardAppearStagger', animation && animation.boardAppearStagger, 0);
     }
 
     private static validateRandom(config: IGameConfig): void {
@@ -61,6 +68,82 @@ export class ConfigValidator {
         if (config.match && config.match.timeLimitSeconds > 0 && levels.timeLimitMinSeconds > config.match.timeLimitSeconds) {
             throw new Error('game config: levels.timeLimitMinSeconds must be <= match.timeLimitSeconds');
         }
+    }
+
+    public static ValidateFields(configs: IFieldConfigFile): void {
+        if (!Array.isArray(configs) || configs.length === 0) {
+            throw new Error('field config: list of field variants is empty');
+        }
+        for (let index = 0; index < configs.length; index++) {
+            ConfigValidator.ValidateField(configs[index], 'field config[' + index + ']');
+        }
+    }
+
+    public static ValidateField(config: IFieldConfig, name: string = 'field config'): void {
+        ConfigValidator.require(config, name);
+        ConfigValidator.requireInteger(config, name + ': rows', config && config.rows, 2);
+        ConfigValidator.requireInteger(config, name + ': columns', config && config.columns, 2);
+        if (typeof config.custom !== 'boolean') {
+            throw new Error(name + ': custom must be a boolean (false — standard grid, true — board matrix)');
+        }
+        if (!config.custom) {
+            return;
+        }
+        const board = ConfigValidator.requireBoard(config, name);
+        if (ConfigValidator.countPlayable(board) === 0) {
+            throw new Error(name + ': board has no playable cells');
+        }
+    }
+
+    private static requireBoard(config: IFieldConfig, name: string): number[][] {
+        const board = config.board;
+        if (board === undefined || board === null) {
+            throw new Error(name + ': board is missing (custom: true requires board)');
+        }
+        if (!Array.isArray(board)) {
+            throw new Error(name + ': board must be a matrix of numbers');
+        }
+        if (board.length === 0) {
+            throw new Error(name + ': board is missing (custom: true requires board)');
+        }
+        if (board.length !== config.rows) {
+            throw new Error(name + ': board must contain ' + config.rows + ' rows (got ' + board.length + ')');
+        }
+        board.forEach((line, row) => {
+            if (!Array.isArray(line) || line.length !== config.columns) {
+                throw new Error(name + ': board row ' + row + ' must contain ' + config.columns + ' numbers');
+            }
+            line.forEach((type, col) => {
+                if (!ConfigValidator.isCeilType(type)) {
+                    throw new Error(name + ': unknown cell type ' + type + ' at board[' + row + '][' + col
+                        + '] (known: ' + ConfigValidator.knownCeilTypes() + ')');
+                }
+            });
+        });
+        return board;
+    }
+
+    private static countPlayable(board: number[][]): number {
+        let playable = 0;
+        for (let row = 0; row < board.length; row++) {
+            for (let col = 0; col < board[row].length; col++) {
+                if (Cell.CanHoldType(board[row][col])) {
+                    playable++;
+                }
+            }
+        }
+        return playable;
+    }
+
+    private static isCeilType(type: number): boolean {
+        return typeof type === 'number' && (CeilType as any)[type] !== undefined;
+    }
+
+    private static knownCeilTypes(): string {
+        return Object.keys(CeilType)
+            .filter((key) => isNaN(Number(key)))
+            .map((key) => (CeilType as any)[key] + ' — ' + key.toLowerCase())
+            .join(', ');
     }
 
     public static ValidateBoosters(config: IBoosterConfigFile): void {
@@ -105,6 +188,13 @@ export class ConfigValidator {
         ConfigValidator.require(section, name + ' section');
         if (typeof value !== 'number' || isNaN(value) || value < min) {
             throw new Error(name + ' must be a number >= ' + min);
+        }
+    }
+
+    private static requireInteger(section: any, name: string, value: number, min: number): void {
+        ConfigValidator.require(section, name + ' section');
+        if (typeof value !== 'number' || !isFinite(value) || !Number.isInteger(value) || value < min) {
+            throw new Error(name + ' must be an integer >= ' + min);
         }
     }
 

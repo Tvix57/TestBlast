@@ -56,7 +56,9 @@ describe('Game: клик по полю', () => {
         const [blast, drop, refill] = result.Steps as any[];
 
         expect(blast.Primary).toEqual(expect.arrayContaining([
-            { Row: 4, Col: 3 }, { Row: 4, Col: 4 }, { Row: 4, Col: 5 }
+            expect.objectContaining({ Row: 4, Col: 3 }),
+            expect.objectContaining({ Row: 4, Col: 4 }),
+            expect.objectContaining({ Row: 4, Col: 5 })
         ]));
         expect(blast.Points).toBe(expectedPoints(config, 3));
         expect(drop.Moves).toHaveLength(12);
@@ -65,8 +67,8 @@ describe('Game: клик по полю', () => {
             expect(move.To.Row).toBeGreaterThan(move.From.Row);
             expect(move.From.Col).toBe(move.To.Col);
         });
-        expect(refill.Spawns.map((spawn: any) => spawn.Cell)).toEqual([
-            { Row: 0, Col: 3 }, { Row: 0, Col: 4 }, { Row: 0, Col: 5 }
+        expect(refill.Spawns.map((spawn: any) => [spawn.Cell.Row, spawn.Cell.Col])).toEqual([
+            [0, 3], [0, 4], [0, 5]
         ]);
         refill.Spawns.forEach((spawn: any) => expect(spawn.FromRow).toBe(-1));
     });

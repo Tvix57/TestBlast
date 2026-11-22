@@ -1,4 +1,4 @@
-import { Cell, ICell } from './Cell';
+import { Cell, CeilType, ICell } from './Cell';
 import { IBoardConfig } from './Config';
 import { Random } from './Random';
 import { Tile } from './Tile';
@@ -21,8 +21,7 @@ export interface ITilePlacement {
 }
 
 export class Board {
-    private _tiles: (Tile | null)[][] = [];
-    private _visited: boolean[][] = [];
+    private _cells: ICell[][] = [];
     private _nextTileId: number = 0;
     private _config: IBoardConfig;
     private _repeatChance: number;
@@ -31,15 +30,14 @@ export class Board {
         this._config = config;
         const chance = config.repeatChance;
         this._repeatChance = isFinite(chance) ? Math.max(0, Math.min(1, chance)) : 0;
+        const types = config.cells || [];
         for (let row = 0; row < config.rows; row++) {
-            const line: (Tile | null)[] = [];
-            const visitedLine: boolean[] = [];
+            const cellLine: ICell[] = [];
             for (let col = 0; col < config.columns; col++) {
-                line.push(null);
-                visitedLine.push(false);
+                const type = types[row] && types[row][col] !== undefined ? types[row][col] : CeilType.Normal;
+                cellLine.push(Cell.Create(row, col, type));
             }
-            this._tiles.push(line);
-            this._visited.push(visitedLine);
+            this._cells.push(cellLine);
         }
     }
 
@@ -51,22 +49,37 @@ export class Board {
         return this._config.rows;
     }
 
+    public get CellGapRatio(): number {
+        return this._config.cellGapRatio;
+    }
+
     public IsInside(row: number, col: number): boolean {
         return row >= 0 && row < this.Rows && col >= 0 && col < this.Columns;
     }
 
-    public GetTile(row: number, col: number): Tile {
+    public GetCell(row: number, col: number): ICell {
         if (!this.IsInside(row, col)) {
             return null;
         }
-        return this._tiles[row][col];
+        return this._cells[row][col];
+    }
+
+    public IsPlayable(row: number, col: number): boolean {
+        const cell = this.GetCell(row, col);
+        return !!cell && Cell.CanHoldTile(cell);
+    }
+
+    public GetTile(row: number, col: number): Tile {
+        const cell = this.GetCell(row, col);
+        return cell ? cell.Tile : null;
     }
 
     public SetTile(row: number, col: number, tile: Tile): void {
-        if (!this.IsInside(row, col)) {
+        const cell = this.GetCell(row, col);
+        if (!cell || !Cell.CanHoldTile(cell)) {
             return;
         }
-        this._tiles[row][col] = tile;
+        cell.Tile = tile;
     }
 
     public CreateTile(color: string): Tile {
@@ -97,7 +110,7 @@ export class Board {
     public Clear(): void {
         for (let row = 0; row < this.Rows; row++) {
             for (let col = 0; col < this.Columns; col++) {
-                this._tiles[row][col] = null;
+                this._cells[row][col].Tile = null;
             }
         }
     }
@@ -107,40 +120,40 @@ export class Board {
         let previousColor = '';
         for (let row = 0; row < this.Rows; row++) {
             for (let col = 0; col < this.Columns; col++) {
-                if (!this._tiles[row][col]) {
-                    const tile = this.CreateRandomTile(previousColor);
-                    previousColor = tile.Color;
-                    this._tiles[row][col] = tile;
-                    placements.push({ Tile: tile, Cell: Cell.Create(row, col) });
+                const cell = this._cells[row][col];
+                if (!Cell.CanHoldTile(cell) || cell.Tile) {
+                    continue;
                 }
+                const tile = this.CreateRandomTile(previousColor);
+                previousColor = tile.Color;
+                cell.Tile = tile;
+                placements.push({ Tile: tile, Cell: cell });
             }
         }
         return placements;
     }
 
     public FindGroup(row: number, col: number): ICell[] {
-        const start = this.GetTile(row, col);
-        if (!start) {
+        const start = this.GetCell(row, col);
+        if (!start || !Cell.CanHoldTile(start) || !start.Tile) {
             return [];
         }
-        this.resetVisited();
+        const color = start.Tile.Color;
+        const visited = new Set<number>();
         const result: ICell[] = [];
-        const queue: ICell[] = [Cell.Create(row, col)];
+        const queue: ICell[] = [start];
         while (queue.length > 0) {
             const cell = queue.shift();
-            if (this._visited[cell.Row][cell.Col]) {
+            const key = cell.Row * this.Columns + cell.Col;
+            if (visited.has(key) || !cell.Tile || cell.Tile.Color !== color) {
                 continue;
             }
-            const tile = this.GetTile(cell.Row, cell.Col);
-            if (!tile || tile.Color !== start.Color) {
-                continue;
-            }
-            this._visited[cell.Row][cell.Col] = true;
+            visited.add(key);
             result.push(cell);
-            this.pushNeighbour(queue, cell.Row - 1, cell.Col);
-            this.pushNeighbour(queue, cell.Row + 1, cell.Col);
-            this.pushNeighbour(queue, cell.Row, cell.Col - 1);
-            this.pushNeighbour(queue, cell.Row, cell.Col + 1);
+            this.pushNeighbour(queue, visited, cell.Row - 1, cell.Col);
+            this.pushNeighbour(queue, visited, cell.Row + 1, cell.Col);
+            this.pushNeighbour(queue, visited, cell.Row, cell.Col - 1);
+            this.pushNeighbour(queue, visited, cell.Row, cell.Col + 1);
         }
         return result;
     }
@@ -152,8 +165,7 @@ export class Board {
     public FindFirstGroup(minGroupSize: number): ICell[] {
         for (let row = 0; row < this.Rows; row++) {
             for (let col = 0; col < this.Columns; col++) {
-                const tile = this._tiles[row][col];
-                if (!tile) {
+                if (!this._cells[row][col].Tile) {
                     continue;
                 }
                 const group = this.FindGroup(row, col);
@@ -170,18 +182,20 @@ export class Board {
         for (let col = 0; col < this.Columns; col++) {
             let writeRow = this.Rows - 1;
             for (let row = this.Rows - 1; row >= 0; row--) {
-                const tile = this._tiles[row][col];
+                const cell = this._cells[row][col];
+                if (!Cell.CanHoldTile(cell)) {
+                    writeRow = row - 1;
+                    continue;
+                }
+                const tile = cell.Tile;
                 if (!tile) {
                     continue;
                 }
                 if (row !== writeRow) {
-                    this._tiles[writeRow][col] = tile;
-                    this._tiles[row][col] = null;
-                    moves.push({
-                        Tile: tile,
-                        From: Cell.Create(row, col),
-                        To: Cell.Create(writeRow, col)
-                    });
+                    const target = this._cells[writeRow][col];
+                    target.Tile = tile;
+                    cell.Tile = null;
+                    moves.push({ Tile: tile, From: cell, To: target });
                 }
                 writeRow--;
             }
@@ -193,37 +207,55 @@ export class Board {
         const spawns: ITileSpawn[] = [];
         let previousColor = '';
         for (let col = 0; col < this.Columns; col++) {
-            let emptyCount = 0;
-            for (let row = 0; row < this.Rows; row++) {
-                if (!this._tiles[row][col]) {
-                    emptyCount++;
-                }
-            }
-            if (emptyCount === 0) {
-                continue;
-            }
-            for (let row = 0; row < this.Rows; row++) {
-                if (this._tiles[row][col]) {
+            let segmentTop = 0;
+            for (let row = 0; row <= this.Rows; row++) {
+                if (row < this.Rows && Cell.CanHoldTile(this._cells[row][col])) {
                     continue;
                 }
-                const tile = this.CreateRandomTile(previousColor);
-                previousColor = tile.Color;
-                this._tiles[row][col] = tile;
-                spawns.push({
-                    Tile: tile,
-                    Cell: Cell.Create(row, col),
-                    FromRow: row - emptyCount
-                });
+                previousColor = this.refillSegment(spawns, col, segmentTop, row - 1, previousColor);
+                segmentTop = row + 1;
             }
         }
         return spawns;
     }
 
+    private refillSegment(spawns: ITileSpawn[], col: number, top: number, bottom: number, previousColor: string): string {
+        let emptyCount = 0;
+        for (let row = top; row <= bottom; row++) {
+            if (!this._cells[row][col].Tile) {
+                emptyCount++;
+            }
+        }
+        if (emptyCount === 0) {
+            return previousColor;
+        }
+        let lastColor = previousColor;
+        for (let row = top; row <= bottom; row++) {
+            const cell = this._cells[row][col];
+            if (cell.Tile) {
+                continue;
+            }
+            const tile = this.CreateRandomTile(lastColor);
+            lastColor = tile.Color;
+            cell.Tile = tile;
+            spawns.push({
+                Tile: tile,
+                Cell: cell,
+                FromRow: row - emptyCount
+            });
+        }
+        return lastColor;
+    }
+
     public Swap(first: ICell, second: ICell): void {
-        const firstTile = this.GetTile(first.Row, first.Col);
-        const secondTile = this.GetTile(second.Row, second.Col);
-        this.SetTile(first.Row, first.Col, secondTile);
-        this.SetTile(second.Row, second.Col, firstTile);
+        if (!this.IsPlayable(first.Row, first.Col) || !this.IsPlayable(second.Row, second.Col)) {
+            return;
+        }
+        const firstCell = this._cells[first.Row][first.Col];
+        const secondCell = this._cells[second.Row][second.Col];
+        const tile = firstCell.Tile;
+        firstCell.Tile = secondCell.Tile;
+        secondCell.Tile = tile;
     }
 
     public Shuffle(): void {
@@ -231,10 +263,10 @@ export class Board {
         const tiles: Tile[] = [];
         for (let row = 0; row < this.Rows; row++) {
             for (let col = 0; col < this.Columns; col++) {
-                const tile = this._tiles[row][col];
-                if (tile) {
-                    cells.push(Cell.Create(row, col));
-                    tiles.push(tile);
+                const cell = this._cells[row][col];
+                if (cell.Tile && Cell.CanHoldTile(cell)) {
+                    cells.push(cell);
+                    tiles.push(cell.Tile);
                 }
             }
         }
@@ -245,7 +277,7 @@ export class Board {
             tiles[j] = swap;
         }
         for (let i = 0; i < cells.length; i++) {
-            this._tiles[cells[i].Row][cells[i].Col] = tiles[i];
+            cells[i].Tile = tiles[i];
         }
     }
 
@@ -253,28 +285,20 @@ export class Board {
         const placements: ITilePlacement[] = [];
         for (let row = 0; row < this.Rows; row++) {
             for (let col = 0; col < this.Columns; col++) {
-                const tile = this._tiles[row][col];
-                if (tile) {
-                    placements.push({ Tile: tile, Cell: Cell.Create(row, col) });
+                const cell = this._cells[row][col];
+                if (cell.Tile) {
+                    placements.push({ Tile: cell.Tile, Cell: cell });
                 }
             }
         }
         return placements;
     }
 
-    private resetVisited(): void {
-        for (let row = 0; row < this.Rows; row++) {
-            const line = this._visited[row];
-            for (let col = 0; col < this.Columns; col++) {
-                line[col] = false;
-            }
-        }
-    }
-
-    private pushNeighbour(queue: ICell[], row: number, col: number): void {
-        if (!this.IsInside(row, col) || this._visited[row][col]) {
+    private pushNeighbour(queue: ICell[], visited: Set<number>, row: number, col: number): void {
+        const cell = this.GetCell(row, col);
+        if (!cell || !Cell.CanHoldTile(cell) || visited.has(row * this.Columns + col)) {
             return;
         }
-        queue.push(Cell.Create(row, col));
+        queue.push(cell);
     }
 }

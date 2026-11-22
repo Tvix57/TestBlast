@@ -3,6 +3,8 @@
 module.exports = {
     testEnvironment: 'node',
     roots: ['<rootDir>/tests'],
+    /** Минимальный `cc` для тестов чистой логики компонентов (без движка). */
+    setupFiles: ['<rootDir>/tests/cc-stub.js'],
     clearMocks: true,
     transform: {
         '^.+\\.ts$': ['ts-jest', { tsconfig: 'tsconfig.test.json' }]

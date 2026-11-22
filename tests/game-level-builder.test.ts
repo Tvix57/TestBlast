@@ -1,8 +1,10 @@
 import { GameSession } from '../assets/scripts/core/GameSession';
 import { GameLevelBuilder } from '../assets/scripts/core/GameLevelBuilder';
+import { CeilType } from '../assets/scripts/core/Cell';
+import { IFieldConfig } from '../assets/scripts/core/Config';
 import { Random } from '../assets/scripts/core/Random';
 import {
-    colorsOf, createBuilder, createLevelGame, loadBoosterConfig, loadGameConfig
+    colorsOf, createBuilder, createLevelGame, fieldLayout, fieldLayouts, loadBoosterConfig, loadGameConfig
 } from './helpers';
 
 const BASE_SEED = 777;
@@ -72,6 +74,7 @@ describe('GameLevelBuilder: сиды', () => {
 
         const zero = builder.Resolve(0, -5);
         const fraction = builder.Resolve(2.9, 1.8);
+        const infinite = builder.Resolve(1, Infinity);
 
         expect(zero.Level).toBe(1);
         expect(zero.FieldVariant).toBe(0);
@@ -79,6 +82,8 @@ describe('GameLevelBuilder: сиды', () => {
         expect(fraction.Level).toBe(2);
         expect(fraction.FieldVariant).toBe(1);
         expect(fraction.Seed).toBe(builder.Resolve(2, 1).Seed);
+        expect(infinite.FieldVariant).toBe(0);
+        expect(infinite.Seed).toBe(builder.Resolve(1, 0).Seed);
     });
 
     it('одинаковые (сид, уровень, раскладка) дают одинаковый сид раскладки', () => {
@@ -236,6 +241,50 @@ describe('GameLevelBuilder: сложность растёт от уровня', 
         new GameLevelBuilder(original, BASE_SEED).Resolve(5, 3);
 
         expect(original).toEqual(snapshot);
+    });
+
+    it('типы клеток из конфига поля попадают в конфиг доски на всех уровнях', () => {
+        const field: IFieldConfig = {
+            version: 1,
+            rows: 2,
+            columns: 3,
+            custom: true,
+            board: [[0, 1, 0], [0, 0, 0]]
+        };
+        const config = loadGameConfig();
+        const shaped = new GameLevelBuilder(config, BASE_SEED, [fieldLayout(config, field)]);
+
+        const first = shaped.Resolve(1, 0).Config.board;
+        const later = shaped.Resolve(7, 3).Config.board;
+
+        expect(first.rows).toBe(2);
+        expect(first.columns).toBe(3);
+        expect(first.cells).toEqual([
+            [CeilType.Normal, CeilType.Blocked, CeilType.Normal],
+            [CeilType.Normal, CeilType.Normal, CeilType.Normal]
+        ]);
+        expect(later.cells).toEqual(first.cells);
+    });
+
+    it('вариант поля выбирается по модулю количества раскладок', () => {
+        const config = loadGameConfig();
+        const fields = fieldLayouts(config);
+        const builder = new GameLevelBuilder(config, BASE_SEED, fields);
+
+        expect(builder.FieldCount).toBe(fields.length);
+        expect(builder.Resolve(1, 0).Config.board.cells).toBeNull();
+        expect(builder.Resolve(1, 1).Config.board.cells).toEqual(fields[1].Types);
+        expect(builder.Resolve(1, fields.length).Config.board.cells).toBeNull();
+    });
+
+    it('без конфига поля остаётся обычная сетка из game-config', () => {
+        const config = loadGameConfig();
+
+        const board = new GameLevelBuilder(config, BASE_SEED).Resolve(1, 0).Config.board;
+
+        expect(board.rows).toBe(config.board.rows);
+        expect(board.columns).toBe(config.board.columns);
+        expect(board.cells).toBeNull();
     });
 
     it('матч строится только из цветов уровня', () => {

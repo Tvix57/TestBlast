@@ -1,5 +1,6 @@
-import { IBoosterConfigFile, IGameConfig } from '../core/Config';
+import { IBoosterConfigFile, IFieldConfigFile, IGameConfig } from '../core/Config';
 import { ConfigValidator } from '../core/ConfigValidator';
+import { FieldLayout } from '../core/FieldLayout';
 import { GameContext } from '../core/GameContext';
 import { IDialogManager } from './dialogs/IDialogManager';
 import { ISceneManager } from './scenes/ISceneManager';
@@ -37,13 +38,16 @@ export class Root {
     public Initialize(
         config: IGameConfig,
         boosterConfig: IBoosterConfigFile,
+        fieldConfigs: IFieldConfigFile,
         dialogs: IDialogManager,
         scenes: ISceneManager
     ): void {
         ConfigValidator.ValidateGame(config);
         ConfigValidator.ValidateBoosters(boosterConfig);
+        ConfigValidator.ValidateFields(fieldConfigs);
+        const fields = fieldConfigs.map((fieldConfig) => FieldLayout.FromConfig(fieldConfig, config.board));
         this._dialogs = dialogs;
         this._scenes = scenes;
-        this._context = new GameContext(config, boosterConfig);
+        this._context = new GameContext(config, boosterConfig, fields);
     }
 }

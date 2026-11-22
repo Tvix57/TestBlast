@@ -1,4 +1,5 @@
 import { IBoardConfig, IGameConfig, ILevelsConfig, IMatchConfig, IRandomConfig } from './Config';
+import { FieldLayout, IFieldLayout } from './FieldLayout';
 import { IGameInfo } from './GameSession';
 
 /** Готовая раскладка: паспорт матча (уровень/вариант поля/сид) + конфиг с числами уровня. */
@@ -16,6 +17,10 @@ export interface ILevelSetup extends IGameInfo {
  * - Сложность растёт по `levels.*`: больше цветов, выше цель, меньше ходов и времени.
  * - Сид раскладки — базовый сид плюс смещение уровня и варианта поля (см. `SeedFor`),
  *   поэтому у каждой раскладки своя последовательность `Random`.
+ * - Формы поля приходят готовыми раскладками (`IFieldLayout[]`), которые строит
+ *   `FieldLayout.FromConfig` после валидации конфигов: стандартная сетка или
+ *   фигурные поля с заблокированными ячейками. Вариант выбирается номером
+ *   `fieldVariant` по модулю количества раскладок.
  */
 export class GameLevelBuilder {
     /** Длина участка сидов, отведённого одному уровню: варианты поля не пересекаются. */
@@ -23,25 +28,33 @@ export class GameLevelBuilder {
 
     private _config: IGameConfig;
     private _baseSeed: number;
+    private _fields: IFieldLayout[];
 
-    constructor(config: IGameConfig, baseSeed?: number) {
+    constructor(config: IGameConfig, baseSeed?: number, fields?: IFieldLayout[]) {
         this._config = config;
         const seed = baseSeed === undefined ? (config.random ? config.random.baseSeed : 0) : baseSeed;
         this._baseSeed = GameLevelBuilder.normalizeSeed(seed);
+        this._fields = fields && fields.length
+            ? fields
+            : [FieldLayout.Standard(config.board.rows, config.board.columns)];
     }
 
     public get BaseSeed(): number {
         return this._baseSeed;
     }
 
+    public get FieldCount(): number {
+        return this._fields.length;
+    }
+
     public Resolve(level: number, fieldVariant: number): ILevelSetup {
         const levelNumber = Math.max(1, Math.floor(level) || 1);
-        const variantNumber = Math.max(0, Math.floor(fieldVariant) || 0);
+        const variantNumber = isFinite(fieldVariant) ? Math.max(0, Math.floor(fieldVariant) || 0) : 0;
         return {
             Level: levelNumber,
             FieldVariant: variantNumber,
             Seed: this.seedFor(levelNumber, variantNumber),
-            Config: this.buildConfig(levelNumber, this._config.levels)
+            Config: this.buildConfig(levelNumber, this._config.levels, variantNumber)
         };
     }
 
@@ -58,10 +71,10 @@ export class GameLevelBuilder {
         return isFinite(value) && value > 0 ? value : GameLevelBuilder.RandomSeed();
     }
 
-    private buildConfig(level: number, levels: ILevelsConfig): IGameConfig {
+    private buildConfig(level: number, levels: ILevelsConfig, fieldVariant: number): IGameConfig {
         return {
             version: this._config.version,
-            board: this.buildBoardConfig(level, levels),
+            board: this.buildBoardConfig(level, levels, fieldVariant),
             match: this.buildMatchConfig(level, levels),
             score: this._config.score,
             shuffle: this._config.shuffle,
@@ -71,16 +84,22 @@ export class GameLevelBuilder {
         };
     }
 
-    private buildBoardConfig(level: number, levels: ILevelsConfig): IBoardConfig {
+    private buildBoardConfig(level: number, levels: ILevelsConfig, fieldVariant: number): IBoardConfig {
         const board = this._config.board;
+        const field = this.fieldFor(fieldVariant);
         return {
-            columns: board.columns,
-            rows: board.rows,
+            columns: field.Columns,
+            rows: field.Rows,
             cellGapRatio: board.cellGapRatio,
             minGroupSize: board.minGroupSize,
             repeatChance: GameLevelBuilder.resolveRepeatChance(board.repeatChance, level),
-            colors: GameLevelBuilder.resolveColors(board.colors, levels, level)
+            colors: GameLevelBuilder.resolveColors(board.colors, levels, level),
+            cells: field.Types
         };
+    }
+
+    private fieldFor(fieldVariant: number): IFieldLayout {
+        return this._fields[fieldVariant % this._fields.length];
     }
 
     private buildMatchConfig(level: number, levels: ILevelsConfig): IMatchConfig {

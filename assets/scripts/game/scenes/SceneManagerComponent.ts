@@ -1,5 +1,4 @@
-import { ISceneManager, SceneType } from './ISceneManager';
-import { MainSceneComponent } from '../MainSceneComponent';
+import { DefaultSceneLayout, ISceneManager, SceneType } from './ISceneManager';
 
 const { ccclass, property } = cc._decorator;
 
@@ -18,7 +17,7 @@ export class SceneManagerComponent extends cc.Component implements ISceneManager
     public startScene: SceneType = SceneType.MainScene;
 
     @property({ type: cc.Integer, visible: true })
-    public startLayout: number = MainSceneComponent.LAYOUT;
+    public startLayout: number = DefaultSceneLayout(SceneType.MainScene);
 
     private _sceneStack: ISceneEntry[] = [];
 

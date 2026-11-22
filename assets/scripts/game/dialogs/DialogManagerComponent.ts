@@ -77,6 +77,12 @@ export class DialogManagerComponent extends cc.Component implements IDialogManag
         }
     }
 
+    public ClearPauseHandler(handler: (paused: boolean) => void): void {
+        if (this._pauseHandler === handler) {
+            this._pauseHandler = null;
+        }
+    }
+
     private closeDialogView(view: DialogView): boolean {
         if (!view || this._dialogStack.indexOf(view) < 0 || !view.MarkClosing()) {
             return false;

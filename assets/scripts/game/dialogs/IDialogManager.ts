@@ -21,4 +21,5 @@ export interface IDialogManager {
     CloseTopDialog(): boolean;
     CloseAllDialogs(): void;
     SetPauseHandler(handler: (paused: boolean) => void): void;
+    ClearPauseHandler(handler: (paused: boolean) => void): void;
 }

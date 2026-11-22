@@ -1,5 +1,7 @@
 import { GameContext } from '../assets/scripts/core/GameContext';
-import { createTestContext, loadBoosterConfig, loadGameConfig } from './helpers';
+import {
+    createTestContext, fieldLayouts, loadBoosterConfig, loadFieldConfigs, loadGameConfig
+} from './helpers';
 
 const BASE_SEED = 4242;
 
@@ -56,11 +58,30 @@ describe('GameContext: переходы между матчами', () => {
         expect(restarted.Config.match.targetScore).toBe(first.Config.match.targetScore);
     });
 
+    it('LoadField загружает любой вариант поля, не меняя уровень', () => {
+        const context = createTestContext();
+        const first = context.Session;
+
+        expect(context.FieldCount).toBeGreaterThanOrEqual(2);
+
+        const second = context.LoadField(1);
+        expect(second).not.toBe(first);
+        expect(second.Level).toBe(first.Level);
+        expect(second.FieldVariant).toBe(1);
+        expect(second.Seed).not.toBe(first.Seed);
+        expect(second.Config.board.cells).toEqual(loadFieldConfigs()[1].board);
+
+        const cycled = context.LoadField(context.FieldCount);
+        expect(cycled.Level).toBe(first.Level);
+        expect(cycled.Config.board.cells).toBeNull();
+    });
+
     it('без базового сида контекст выбирает случайный, но воспроизводимый внутри себя', () => {
         const now = jest.spyOn(Date, 'now').mockReturnValue(1000);
         const random = jest.spyOn(Math, 'random').mockReturnValueOnce(0.25);
         try {
-            const context = new GameContext(loadGameConfig(), loadBoosterConfig());
+            const config = loadGameConfig();
+            const context = new GameContext(config, loadBoosterConfig(), fieldLayouts(config));
 
             expect(context.LevelBuilder.BaseSeed).toBe(251);
             expect(context.Session.Seed).toBe(context.LevelBuilder.Resolve(1, 0).Seed);

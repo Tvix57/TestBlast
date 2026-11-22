@@ -1,16 +1,23 @@
-import { Cell } from '../assets/scripts/core/Cell';
+import { Cell, CeilType } from '../assets/scripts/core/Cell';
 import { AbstractDispatcher, Dispatcher } from '../assets/scripts/core/Dispatcher';
 import { Random } from '../assets/scripts/core/Random';
 import { Tile } from '../assets/scripts/core/Tile';
 import { randomSeries } from './helpers';
 
 describe('Cell и Tile', () => {
-    it('Cell.Create собирает координату, Cell.Same сравнивает по значению', () => {
+    it('Cell.Create собирает координату и тип, Cell.Same сравнивает по значению', () => {
         const cell = Cell.Create(2, 5);
 
-        expect(cell).toEqual({ Row: 2, Col: 5 });
-        expect(Cell.Same(cell, { Row: 2, Col: 5 })).toBe(true);
-        expect(Cell.Same(cell, { Row: 5, Col: 2 })).toBe(false);
+        expect(cell).toEqual({ Row: 2, Col: 5, Type: CeilType.Normal, Tile: null });
+        expect(Cell.Same(cell, Cell.Create(2, 5))).toBe(true);
+        expect(Cell.Same(cell, Cell.Create(5, 2))).toBe(false);
+    });
+
+    it('Cell.CanHoldTile разводит поведение по типу клетки (switch)', () => {
+        expect(Cell.CanHoldTile(Cell.Create(0, 0))).toBe(true);
+        expect(Cell.CanHoldTile(Cell.Create(0, 0, CeilType.Normal))).toBe(true);
+        expect(Cell.CanHoldTile(Cell.Create(0, 0, CeilType.Blocked))).toBe(false);
+        expect(Cell.CanHoldTile({ Row: 0, Col: 0, Type: 99 as CeilType, Tile: null })).toBe(false);
     });
 
     it('Tile хранит идентификатор и цвет без изменений', () => {

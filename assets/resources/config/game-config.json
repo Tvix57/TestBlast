@@ -36,17 +36,16 @@
     "timeLimitMinSeconds": 90
   },
   "animation": {
-    "swapDuration": 0.18,
     "fallDuration": 0.26,
     "fallEasing": "quadIn",
     "blastDuration": 0.24,
     "blastScale": 1.3,
     "blastStagger": 0.02,
     "spawnDuration": 0.32,
-    "superSpawnDuration": 0.36,
     "shuffleDuration": 0.45,
     "invalidShakeDuration": 0.3,
     "invalidShakeOffset": 8,
-    "boardAppearDuration": 0.5
+    "boardAppearDuration": 0.25,
+    "boardAppearStagger": 0.012
   }
 }

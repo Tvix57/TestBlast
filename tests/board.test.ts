@@ -8,6 +8,7 @@ describe('Board: матрица поля', () => {
 
     it('Fill создаёт columns*rows тайлов только из палитры конфига', () => {
         const board = createBoard(config);
+        expect(board.CellGapRatio).toBe(config.board.cellGapRatio);
         board.Fill();
         expect(countTiles(board)).toBe(config.board.columns * config.board.rows);
         for (let row = 0; row < board.Rows; row++) {
@@ -15,6 +16,20 @@ describe('Board: матрица поля', () => {
                 expect(config.board.colors).toContain(board.GetTile(row, col).Color);
             }
         }
+    });
+
+    it('тайл живёт в клетке: GetTile читает ICell.Tile, Clear оставляет сами клетки', () => {
+        const board = createBoard(config);
+        board.Fill();
+        const cell = board.GetCell(0, 0);
+
+        expect(cell.Tile).toBe(board.GetTile(0, 0));
+
+        board.Clear();
+
+        expect(board.GetCell(0, 0)).toBe(cell);
+        expect(cell.Tile).toBeNull();
+        expect(board.GetTile(0, 0)).toBeNull();
     });
 
     it('GetTile и IsInside корректно работают за границами поля', () => {
@@ -147,8 +162,8 @@ describe('Board: поиск группы', () => {
         ]));
         const group = board.FindGroup(4, 4);
         expect(group).toHaveLength(5);
-        expect(group).toContainEqual({ Row: 3, Col: 4 });
-        expect(group).toContainEqual({ Row: 5, Col: 4 });
+        expect(group).toContainEqual(expect.objectContaining({ Row: 3, Col: 4 }));
+        expect(group).toContainEqual(expect.objectContaining({ Row: 5, Col: 4 }));
     });
 
     it('FindGroup на одиночном тайле возвращает одну клетку', () => {

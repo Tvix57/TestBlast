@@ -1,13 +1,26 @@
 import { BoosterTargeting, BoosterType } from './BoosterRules';
+import { CeilType } from './Cell';
 
-export interface IBoardConfig {
-    columns: number;
+export interface IFieldDimensions {
     rows: number;
+    columns: number;
+}
+
+export interface IBoardConfig extends IFieldDimensions {
     cellGapRatio: number;
     minGroupSize: number;
     repeatChance: number;
     colors: string[];
+    cells?: CeilType[][] | null;
 }
+
+export interface IFieldConfig extends IFieldDimensions {
+    version: number;
+    custom: boolean;
+    board?: number[][];
+}
+
+export type IFieldConfigFile = IFieldConfig[];
 
 export interface IMatchConfig {
     targetScore: number;
@@ -42,18 +55,17 @@ export interface ILevelsConfig {
 }
 
 export interface IAnimationConfig {
-    swapDuration: number;
     fallDuration: number;
     fallEasing: string;
     blastDuration: number;
     blastScale: number;
     blastStagger: number;
     spawnDuration: number;
-    superSpawnDuration: number;
     shuffleDuration: number;
     invalidShakeDuration: number;
     invalidShakeOffset: number;
     boardAppearDuration: number;
+    boardAppearStagger: number;
 }
 
 export interface IGameConfig {
