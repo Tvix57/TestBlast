@@ -73,11 +73,11 @@ export class GameLevelBuilder {
             version: this._config.version,
             board: this.buildBoardConfig(level, levels, fieldVariant),
             match: this.buildMatchConfig(level, levels),
-            score: this._config.score,
-            shuffle: this._config.shuffle,
+            score: { ...this._config.score },
+            shuffle: { ...this._config.shuffle },
             random: this.buildRandomConfig(),
-            levels: levels,
-            animation: this._config.animation
+            levels: { ...levels },
+            animation: { ...this._config.animation }
         };
     }
 
