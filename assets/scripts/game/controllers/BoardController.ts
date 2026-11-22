@@ -1,14 +1,13 @@
 import { Board } from '../../core/Board';
-import { ICell } from '../../core/Cell';
+import { Cell, ICell } from '../../core/Cell';
 import { IAnimationConfig } from '../../core/Config';
 import { Tile } from '../../core/Tile';
-import { IDropTilesStep, IRefillStep, IShuffleStep } from '../../core/TurnResult';
+import { IBlastStep, IDropTilesStep, IRefillStep, IShuffleStep, ISuperSpawn, ISwapStep } from '../../core/TurnResult';
 import { ITurnStep, TurnStepType } from '../../core/TurnStepType';
 import { IBoardStage } from '../IBoardStage';
 import { BoardLayout, IBoardMetrics, IBoardPosition } from '../layout/BoardLayout';
 import { TileView } from '../TileView';
 
-/** Активность поля: ввод и раскладка ждут, пока поле не вернётся в `Idle`. */
 enum BoardActivity {
     Idle,
     Building,
@@ -16,27 +15,16 @@ enum BoardActivity {
     Invalid
 }
 
-/**
- * Контроллер поля: модель, индексы видов, раскладка и цепочки шагов хода — без `cc`.
- *
- * Вид (`BoardView`) остаётся тонким адаптером: даёт контроллеру порты отрисовки
- * (`IBoardStage`), а `IBoardView` транслирует наружу его публичные вызовы.
- * Один индекс клеток заменяет вторую карту «тайл → вид»: поиск по тайлу идёт
- * по той же матрице (поле ≤ 81 клетки). Вместо трёх токенов и трёх флагов
- * анимации — одно поколение действий и одно состояние активности.
- */
 export class BoardController {
     private _stage: IBoardStage;
     private _board: Board = null;
     private _animation: IAnimationConfig = null;
     private _clickHandler: (cell: ICell) => void = null;
-    /** Индекс вью по клеткам: матрица rows × columns, повторяет форму поля. */
     private _views: (TileView | null)[][] = [];
-    /** Сторона квадратной ячейки и шаг сетки в локальных координатах поля. */
     private _metrics: IBoardMetrics = { cellSize: 0, step: 0, boardWidth: 0, boardHeight: 0 };
     private _activity: BoardActivity = BoardActivity.Idle;
-    /** Поколение действий: Build/PlaySteps/PlayInvalid обрывают незавершённые цепочки. */
     private _token: number = 0;
+    private _selectedCell: ICell = null;
 
     constructor(stage: IBoardStage, board: Board, animation: IAnimationConfig) {
         this._stage = stage;
@@ -49,7 +37,6 @@ export class BoardController {
         this._clickHandler = handler;
     }
 
-    /** Ход анимации: ввод закрыт до `Unlock`. */
     public Lock(): void {
         this._activity = BoardActivity.Playing;
     }
@@ -61,7 +48,24 @@ export class BoardController {
         this.finishActivity();
     }
 
-    /** Клик тайла: пока идёт появление/ход/отказ, ввод игнорируется. */
+    public SetSelected(cell: ICell | null): void {
+        const previous = this._selectedCell;
+        this._selectedCell = cell;
+        if (previous && (!cell || !Cell.Same(previous, cell))) {
+            const view = this.getViewByCell(previous);
+            if (view && view.isValid) {
+                view.PlaySelected(false);
+            }
+        }
+        if (!cell) {
+            return;
+        }
+        const view = this.getViewByCell(cell);
+        if (view && view.isValid) {
+            view.PlaySelected(true);
+        }
+    }
+
     public OnTileClick(cell: ICell): void {
         if (this.isBusy || !this._clickHandler) {
             return;
@@ -76,7 +80,6 @@ export class BoardController {
         this._views = [];
     }
 
-    /** Полная пересборка поля по состоянию модели (старт матча). */
     public Build(): Promise<void> {
         const token = ++this._token;
         this._activity = BoardActivity.Idle;
@@ -173,19 +176,49 @@ export class BoardController {
     private playStep(step: ITurnStep): Promise<void> {
         switch (step.Type) {
             case TurnStepType.Blast:
-                return this.blastCells(step.Primary);
+                return this.playBlast(step);
             case TurnStepType.DropTiles:
                 return this.playDropTiles(step);
             case TurnStepType.Refill:
                 return this.playRefill(step);
             case TurnStepType.Shuffle:
                 return this.playShuffle(step);
+            case TurnStepType.Swap:
+                return this.playSwap(step);
             default:
                 return Promise.resolve();
         }
     }
 
-    private blastCells(cells: ICell[]): Promise<void> {
+    private playBlast(step: IBlastStep): Promise<void> {
+        const token = this._token;
+        return this.blastCells(step.Primary, 0)
+            .then(() => {
+                if (token !== this._token) {
+                    return undefined;
+                }
+                return this.blastCells(step.Chain || [], 0.03);
+            })
+            .then(() => {
+                if (token !== this._token) {
+                    return undefined;
+                }
+                return this.spawnSuper(step.Spawned);
+            });
+    }
+
+    private spawnSuper(spawn: ISuperSpawn): Promise<void> {
+        if (!spawn) {
+            return Promise.resolve();
+        }
+        const view = this.spawnView(spawn.Tile, spawn.Cell, spawn.Cell.Row);
+        if (!view) {
+            return Promise.resolve();
+        }
+        return view.PlaySuperSpawn(this._animation.superSpawnDuration);
+    }
+
+    private blastCells(cells: ICell[], startDelay: number): Promise<void> {
         const animation = this._animation;
         const token = this._token;
         const promises: Promise<void>[] = [];
@@ -194,7 +227,7 @@ export class BoardController {
             if (!view) {
                 return;
             }
-            promises.push(view.PlayBlast(animation.blastDuration, index * animation.blastStagger, animation.blastScale));
+            promises.push(view.PlayBlast(animation.blastDuration, startDelay + index * animation.blastStagger, animation.blastScale));
         });
         return Promise.all(promises).then(() => {
             if (token !== this._token) {
@@ -248,7 +281,41 @@ export class BoardController {
         return Promise.all(promises).then(() => undefined);
     }
 
+    private playSwap(step: ISwapStep): Promise<void> {
+        const animation = this._animation;
+        const firstView = this.getViewByCell(step.First);
+        const secondView = this.getViewByCell(step.Second);
+        if (!firstView && !secondView) {
+            return Promise.resolve();
+        }
+        if (firstView) {
+            this.removeCellEntry(step.First, firstView);
+        }
+        if (secondView) {
+            this.removeCellEntry(step.Second, secondView);
+        }
+        if (firstView) {
+            firstView.SetCell(step.Second);
+            this.setViewByCell(step.Second, firstView);
+        }
+        if (secondView) {
+            secondView.SetCell(step.First);
+            this.setViewByCell(step.First, secondView);
+        }
+        const promises: Promise<void>[] = [];
+        if (firstView) {
+            const target = this.positionOf(step.Second.Row, step.Second.Col);
+            promises.push(firstView.MoveTo(target.x, target.y, animation.swapDuration, 'quadInOut'));
+        }
+        if (secondView) {
+            const target = this.positionOf(step.First.Row, step.First.Col);
+            promises.push(secondView.MoveTo(target.x, target.y, animation.swapDuration, 'quadInOut'));
+        }
+        return Promise.all(promises).then(() => undefined);
+    }
+
     private clearViews(): void {
+        this._selectedCell = null;
         this._views = this.createCellIndex();
         this._stage.ClearTiles();
     }
@@ -341,6 +408,9 @@ export class BoardController {
             return;
         }
         if (view.Cell) {
+            if (this._selectedCell && Cell.Same(this._selectedCell, view.Cell)) {
+                this._selectedCell = null;
+            }
             this.removeCellEntry(view.Cell, view);
         }
         this._stage.ReleaseTileView(view);

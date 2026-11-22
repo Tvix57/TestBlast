@@ -293,7 +293,7 @@ describe('GameLevelBuilder: сложность растёт от уровня', 
 
         expect(setup.Config.board.colors.length).toBe(config.levels.colorsStart);
         game.Board.GetPlacements().forEach((placement) => {
-            expect(setup.Config.board.colors).toContain(placement.Tile.Color);
+            expect(setup.Config.board.colors).toContain(placement.Tile.Type);
         });
     });
 });

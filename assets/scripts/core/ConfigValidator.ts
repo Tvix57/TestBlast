@@ -1,6 +1,7 @@
 import { BoosterTargeting, BoosterType } from './BoosterRules';
 import { Cell, CeilType } from './Cell';
 import { IBoosterConfigFile, IFieldConfig, IFieldConfigFile, IGameConfig } from './Config';
+import { COLOR_TILE_TYPES, SUPER_TILE_TYPES, TileType } from './Tile';
 
 export class ConfigValidator {
     public static ValidateGame(config: IGameConfig): void {
@@ -17,6 +18,12 @@ export class ConfigValidator {
         if (!config.board || !config.board.colors || config.board.colors.length < 2) {
             throw new Error('game config: board.colors must contain at least 2 colors');
         }
+        config.board.colors.forEach((type) => {
+            if (COLOR_TILE_TYPES.indexOf(type) < 0) {
+                throw new Error('game config: unknown tile type "' + type + '" in board.colors (known: '
+                    + COLOR_TILE_TYPES.join(', ') + ')');
+            }
+        });
         if (!config.shuffle) {
             throw new Error('game config: shuffle section is missing');
         }
@@ -168,6 +175,21 @@ export class ConfigValidator {
         if (!config.superTiles || !config.superTiles.effects) {
             throw new Error('booster config: superTiles.effects is missing');
         }
+        Object.keys(config.superTiles.effects).forEach((type) => {
+            if (SUPER_TILE_TYPES.indexOf(type as TileType) < 0) {
+                throw new Error('booster config: unknown super tile type "' + type
+                    + '" in superTiles.effects (add it to TileType)');
+            }
+        });
+        const spawnRules = config.superTiles.spawnRules || [];
+        spawnRules.forEach((rule) => {
+            (rule.types || []).forEach((type) => {
+                if (SUPER_TILE_TYPES.indexOf(type) < 0) {
+                    throw new Error('booster config: unknown super tile type "' + type
+                        + '" in superTiles.spawnRules (add it to TileType)');
+                }
+            });
+        });
     }
 
     private static isBoosterType(type: string): boolean {

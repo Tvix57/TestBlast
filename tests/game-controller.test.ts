@@ -2,7 +2,8 @@ import { Cell } from '../assets/scripts/core/Cell';
 import { GameResult, GameState } from '../assets/scripts/core/GameResult';
 import { GameController } from '../assets/scripts/game/GameController';
 import {
-    checkerboard, createBoardView, createClock, createDeferred, createGame, flushPromises, setBoard, withCells
+    checkerboard, createBoardView, createBoostersView, createClock, createDeferred, createGame, flushPromises,
+    setBoard, withCells
 } from './helpers';
 
 const groupOfThree = withCells(checkerboard(), [[4, 3, 'B'], [4, 4, 'B'], [4, 5, 'B']]);
@@ -11,7 +12,7 @@ describe('GameController: ввод, анимации и финал', () => {
     it('Start запускает модель и пересобирает поле', () => {
         const game = createGame();
         const view = createBoardView();
-        const controller = new GameController(game, view as any);
+        const controller = new GameController(game, view as any, createBoostersView() as any);
 
         controller.Start();
 
@@ -22,7 +23,7 @@ describe('GameController: ввод, анимации и финал', () => {
     it('до старта матча клик не доходит до вида', () => {
         const game = createGame();
         const view = createBoardView();
-        const controller = new GameController(game, view as any);
+        const controller = new GameController(game, view as any, createBoostersView() as any);
 
         controller.OnCellClick(Cell.Create(4, 4));
 
@@ -34,7 +35,7 @@ describe('GameController: ввод, анимации и финал', () => {
     it('после старта отклонённый ход проигрывает анимацию отказа', () => {
         const game = createGame();
         const view = createBoardView();
-        const controller = new GameController(game, view as any);
+        const controller = new GameController(game, view as any, createBoostersView() as any);
         controller.Start();
         setBoard(game.Board, checkerboard());
 
@@ -49,7 +50,7 @@ describe('GameController: ввод, анимации и финал', () => {
         const view = createBoardView();
         const animation = createDeferred<void>();
         view.PlaySteps.mockReturnValue(animation.promise);
-        const controller = new GameController(game, view as any);
+        const controller = new GameController(game, view as any, createBoostersView() as any);
         controller.Start();
         setBoard(game.Board, groupOfThree);
 
@@ -72,7 +73,7 @@ describe('GameController: ввод, анимации и финал', () => {
         const game = createGame({ movesLimit: 3, targetScore: 100000 });
         const view = createBoardView();
         view.PlaySteps.mockReturnValue(Promise.reject(new Error('animation failed')));
-        const controller = new GameController(game, view as any);
+        const controller = new GameController(game, view as any, createBoostersView() as any);
         controller.Start();
         setBoard(game.Board, groupOfThree);
 
@@ -89,7 +90,7 @@ describe('GameController: ввод, анимации и финал', () => {
     it('сообщает о финале один раз — после завершения анимации хода', async () => {
         const game = createGame({ targetScore: 30, timeLimitSeconds: 60 });
         const view = createBoardView();
-        const controller = new GameController(game, view as any);
+        const controller = new GameController(game, view as any, createBoostersView() as any);
         const onFinished = jest.fn();
         controller.OnFinished = onFinished;
         controller.Start();
@@ -113,7 +114,7 @@ describe('GameController: ввод, анимации и финал', () => {
         const clock = createClock();
         const game = createGame({ timeLimitSeconds: 1, targetScore: 100000, clock: clock.now });
         const view = createBoardView();
-        const controller = new GameController(game, view as any);
+        const controller = new GameController(game, view as any, createBoostersView() as any);
         const onFinished = jest.fn();
         controller.OnFinished = onFinished;
         controller.Start();
@@ -131,7 +132,7 @@ describe('GameController: ввод, анимации и финал', () => {
     it('Start после финала снова разрешает ход и сбрасывает уведомление', async () => {
         const game = createGame({ targetScore: 30, timeLimitSeconds: 60 });
         const view = createBoardView();
-        const controller = new GameController(game, view as any);
+        const controller = new GameController(game, view as any, createBoostersView() as any);
         const onFinished = jest.fn();
         controller.OnFinished = onFinished;
         controller.Start();

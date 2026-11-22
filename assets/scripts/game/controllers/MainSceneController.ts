@@ -4,6 +4,7 @@ import { GameSession } from '../../core/GameSession';
 import { DialogsController } from '../dialogs/DialogsController';
 import { GameController } from '../GameController';
 import { IBoardView } from '../IBoardView';
+import { IBoostersView } from '../IBoostersView';
 import { Root } from '../Root';
 import { HudView } from '../views/HudView';
 import { IMatchScheduler, MatchTicker } from './MatchTicker';
@@ -13,12 +14,20 @@ export class MainSceneController {
     private _dialogs: DialogsController;
     private _boardView: IBoardView;
     private _hudView: HudView;
+    private _boostersView: IBoostersView;
     private _gameController: GameController = null;
     private _pauseHandler: (paused: boolean) => void = null;
     private _ticker: MatchTicker;
 
-    public static Create(boardView: IBoardView, hudView: HudView, scheduler: IMatchScheduler): MainSceneController {
-        return new MainSceneController(Root.Instance.Context, new DialogsController(), boardView, hudView, scheduler);
+    public static Create(
+        boardView: IBoardView,
+        hudView: HudView,
+        scheduler: IMatchScheduler,
+        boostersView: IBoostersView
+    ): MainSceneController {
+        return new MainSceneController(
+            Root.Instance.Context, new DialogsController(), boardView, hudView, scheduler, boostersView
+        );
     }
 
     constructor(
@@ -26,12 +35,14 @@ export class MainSceneController {
         dialogs: DialogsController,
         boardView: IBoardView,
         hudView: HudView,
-        scheduler: IMatchScheduler
+        scheduler: IMatchScheduler,
+        boostersView: IBoostersView
     ) {
         this._context = context;
         this._dialogs = dialogs;
         this._boardView = boardView;
         this._hudView = hudView;
+        this._boostersView = boostersView;
         this._ticker = new MatchTicker(
             scheduler,
             () => this.session.Timer,
@@ -74,13 +85,16 @@ export class MainSceneController {
 
         this._boardView.Init(session.Board, session.Config.animation);
         this._hudView.Bind(session);
+        this._boostersView.Bind(session.Boosters, session.Rules);
 
-        this._gameController = new GameController(session, this._boardView);
+        const gameController = new GameController(session, this._boardView, this._boostersView);
+        this._gameController = gameController;
         this._gameController.OnFinished = (result: GameResult) => {
             this._ticker.Stop();
             this.showEndDialog(result);
         };
-        this._boardView.SetClickHandler((cell) => this._gameController.OnCellClick(cell));
+        this._boardView.SetClickHandler((cell) => gameController.OnCellClick(cell));
+        this._boostersView.SetClickHandler((type) => gameController.OnBoosterClick(type));
     }
 
     private startMatch(): void {

@@ -1,5 +1,6 @@
 import { BoardView } from './BoardView';
 import { MainSceneController } from './controllers/MainSceneController';
+import { BoostersView } from './views/BoostersView';
 import { HudView } from './views/HudView';
 
 const { ccclass, property } = cc._decorator;
@@ -12,13 +13,16 @@ export class MainSceneComponent extends cc.Component {
     @property({ type: HudView, visible: true })
     public hudView!: HudView;
 
+    @property({ type: BoostersView, visible: true })
+    public boostersView!: BoostersView;
+
     private _sceneController: MainSceneController = null;
 
     protected onLoad(): void {
         this._sceneController = MainSceneController.Create(this.boardView, this.hudView, {
             Schedule: (callback: () => void, intervalSeconds: number) => this.schedule(callback, intervalSeconds),
             Unschedule: (callback: () => void) => this.unschedule(callback)
-        });
+        }, this.boostersView);
         this._sceneController.Start();
     }
 

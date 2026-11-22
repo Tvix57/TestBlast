@@ -1,12 +1,17 @@
-import { Tile } from '../core/Tile';
+import { Tile, TileType } from '../core/Tile';
 
-const COLOR_FRAMES: { [color: string]: string } = {
-    blue: 'block_blue',
-    red: 'block_red',
-    green: 'block_green',
-    yellow: 'block_yellow',
-    purple: 'block_purpure'
-};
+/** Кадры всех типов тайлов в атласе game_obj: обычные цвета и супер-тайлы. */
+const TILE_FRAMES = new Map<TileType, string>([
+    [TileType.Blue, 'block_blue'],
+    [TileType.Red, 'block_red'],
+    [TileType.Green, 'block_green'],
+    [TileType.Yellow, 'block_yellow'],
+    [TileType.Purple, 'block_purpure'],
+    [TileType.Bomb, 'block_bomb'],
+    [TileType.BombMax, 'block_bomb_max'],
+    [TileType.HorizontalBlast, 'horizontal_blast'],
+    [TileType.VerticalBlast, 'vertical_blast']
+]);
 
 export interface ITileSize {
     width: number;
@@ -18,7 +23,7 @@ export class TileUtil {
         if (!tile) {
             return '';
         }
-        return COLOR_FRAMES[tile.Color] || '';
+        return TILE_FRAMES.get(tile.Type) || '';
     }
 
     public static Fit(art: ITileSize, cellSize: number): ITileSize {

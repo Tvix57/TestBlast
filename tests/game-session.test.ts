@@ -1,4 +1,5 @@
 import { GameResult, GameState } from '../assets/scripts/core/GameResult';
+import { TileType } from '../assets/scripts/core/Tile';
 import { TurnStepType } from '../assets/scripts/core/TurnStepType';
 import { checkerboard, createClock, createGame, setBoard, withCells } from './helpers';
 
@@ -41,9 +42,9 @@ describe('GameSession: паспорт и состояние матча', () => {
             return [];
         });
         const shuffle = jest.spyOn(game.Board, 'Shuffle').mockImplementation(() => {
-            game.Board.SetTile(0, 0, game.Board.CreateTile('blue'));
-            game.Board.SetTile(0, 1, game.Board.CreateTile('blue'));
-            game.Board.SetTile(0, 2, game.Board.CreateTile('blue'));
+            game.Board.SetTile(0, 0, game.Board.CreateTile(TileType.Blue));
+            game.Board.SetTile(0, 1, game.Board.CreateTile(TileType.Blue));
+            game.Board.SetTile(0, 2, game.Board.CreateTile(TileType.Blue));
         });
 
         game.Start();

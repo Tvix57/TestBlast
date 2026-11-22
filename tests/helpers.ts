@@ -9,6 +9,7 @@ import { GameContext } from '../assets/scripts/core/GameContext';
 import { GameLevelBuilder } from '../assets/scripts/core/GameLevelBuilder';
 import { GameSession } from '../assets/scripts/core/GameSession';
 import { Random } from '../assets/scripts/core/Random';
+import { TileType } from '../assets/scripts/core/Tile';
 import { IDialogManager } from '../assets/scripts/game/dialogs/IDialogManager';
 import { ISceneManager, SceneType } from '../assets/scripts/game/scenes/ISceneManager';
 
@@ -29,18 +30,26 @@ export function loadFieldConfig(): IFieldConfig {
     return loadFieldConfigs()[0];
 }
 
-/** Конфиг бустеров: сейчас читается только валидатором в Root, механика вырезана. */
+/** Конфиг бустеров и супер-тайлов проекта. */
 export function loadBoosterConfig(): IBoosterConfigFile {
     return JSON.parse(fs.readFileSync(path.join(CONFIG_DIR, 'booster-config.json'), 'utf8'));
 }
 
 /** Символы матрицы поля: цвета B/R/G/Y/P, точка — пусто. */
-export const COLORS: { [key: string]: string } = {
-    B: 'blue',
-    R: 'red',
-    G: 'green',
-    Y: 'yellow',
-    P: 'purple'
+export const COLORS: { [key: string]: TileType } = {
+    B: TileType.Blue,
+    R: TileType.Red,
+    G: TileType.Green,
+    Y: TileType.Yellow,
+    P: TileType.Purple
+};
+
+/** Символы супер-тайлов матрицы поля: тип совпадает с `superTiles.effects`. */
+export const SUPERS: { [key: string]: TileType } = {
+    '1': TileType.Bomb,
+    '2': TileType.BombMax,
+    '3': TileType.HorizontalBlast,
+    '4': TileType.VerticalBlast
 };
 
 /** Часы модели по умолчанию: время стоит. Для проверок хода времени используйте `createClock()`. */
@@ -68,6 +77,7 @@ export interface IGameOptions {
     timeLimitSeconds?: number;
     targetScore?: number;
     maxAttempts?: number;
+    boosterConfig?: IBoosterConfigFile;
     clock?: () => number;
     /** Конфиг поля: по умолчанию берётся `field-config.json` проекта. */
     field?: IFieldConfig;
@@ -85,7 +95,7 @@ export function createGame(options: IGameOptions = {}): GameSession {
     }
     config.random.baseSeed = options.seed === undefined ? 7 : options.seed;
     applyField(config, options.field === undefined ? loadFieldConfig() : options.field);
-    return GameSession.Create(config, loadBoosterConfig(), {
+    return GameSession.Create(config, options.boosterConfig || loadBoosterConfig(), {
         Level: 1,
         FieldVariant: 0,
         Seed: config.random.baseSeed
@@ -141,7 +151,7 @@ export function setBoard(board: Board, matrix: string[]): void {
             if (symbol === '.') {
                 continue;
             }
-            board.SetTile(row, col, board.CreateTile(COLORS[symbol] || ''));
+            board.SetTile(row, col, board.CreateTile(COLORS[symbol] || SUPERS[symbol]));
         }
     });
 }
@@ -170,6 +180,21 @@ export function expectedPoints(config: IGameConfig, groupSize: number): number {
     let points = groupSize * score.perTile;
     if (groupSize >= score.groupBonusStartSize) {
         points += (groupSize - score.groupBonusStartSize + 1) * score.groupBonusPerTile;
+    }
+    return points;
+}
+
+/** Очки хода с цепочкой супер-тайлов и возможным появлением нового супер-тайла. */
+export function expectedChainPoints(
+    config: IGameConfig, removed: number, groupSize: number, hasSuperSpawn: boolean
+): number {
+    const score = config.score;
+    let points = removed * score.perTile;
+    if (groupSize >= score.groupBonusStartSize) {
+        points += (groupSize - score.groupBonusStartSize + 1) * score.groupBonusPerTile;
+    }
+    if (hasSuperSpawn) {
+        points += score.superTileBonus;
     }
     return points;
 }
@@ -290,14 +315,14 @@ export function createFieldBoard(lines: string[], seed: number = 7): Board {
     return new Board(config.board);
 }
 
-export function fillColors(repeatChance: number, seed: number): string[] {
+export function fillColors(repeatChance: number, seed: number): TileType[] {
     const config = loadGameConfig();
     config.board.repeatChance = repeatChance;
-    return createBoard(config, seed).Fill().map((placement) => placement.Tile.Color);
+    return createBoard(config, seed).Fill().map((placement) => placement.Tile.Type);
 }
 
 export function colorsOf(game: GameSession): string {
-    return game.Board.GetPlacements().map((placement) => placement.Tile.Color).join(',');
+    return game.Board.GetPlacements().map((placement) => placement.Tile.Type).join(',');
 }
 
 export function colorsOfSeed(seed: number): string {
@@ -329,6 +354,7 @@ export function createBoardView() {
     return {
         Init: jest.fn(),
         SetClickHandler: jest.fn(),
+        SetSelected: jest.fn(),
         Build: jest.fn(() => Promise.resolve()),
         Lock: jest.fn(),
         Unlock: jest.fn(),
@@ -367,6 +393,8 @@ export function createTileView() {
         MoveTo: jest.fn(() => Promise.resolve()),
         PlaySpawnFall: jest.fn(() => Promise.resolve()),
         PlayShuffleMove: jest.fn(() => Promise.resolve()),
+        PlaySuperSpawn: jest.fn(() => Promise.resolve()),
+        PlaySelected: jest.fn(),
         PlayInvalid: jest.fn(() => Promise.resolve())
     };
     return view;
@@ -441,6 +469,17 @@ export function createHudView() {
     };
 }
 
+/** Фейк панели бустеров: порт `IBoostersView` без `cc`. */
+export function createBoostersView() {
+    return {
+        Bind: jest.fn(),
+        SetClickHandler: jest.fn(),
+        Select: jest.fn(),
+        ClearSelection: jest.fn(),
+        PlayUnavailable: jest.fn()
+    };
+}
+
 export function createDialogManager(): IDialogManager {
     return {
         OpenDialog: jest.fn(() => true),
@@ -465,8 +504,8 @@ export function createSceneManager(): ISceneManager {
 export function fillWithoutGroups(game: GameSession): void {
     for (let row = 0; row < game.Board.Rows; row++) {
         for (let col = 0; col < game.Board.Columns; col++) {
-            const color = (row + col) % 2 === 0 ? 'purple' : 'red';
-            game.Board.SetTile(row, col, game.Board.CreateTile(color));
+            const type = (row + col) % 2 === 0 ? TileType.Purple : TileType.Red;
+            game.Board.SetTile(row, col, game.Board.CreateTile(type));
         }
     }
 }

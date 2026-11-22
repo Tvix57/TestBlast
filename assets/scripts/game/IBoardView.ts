@@ -6,6 +6,7 @@ import { ITurnStep } from '../core/TurnStepType';
 export interface IBoardView {
     Init(board: Board, animation: IAnimationConfig): void;
     SetClickHandler(handler: (cell: ICell) => void): void;
+    SetSelected(cell: ICell | null): void;
     Build(): Promise<void>;
     PlaySteps(steps: ITurnStep[]): Promise<void>;
     PlayInvalid(cell: ICell): Promise<void>;

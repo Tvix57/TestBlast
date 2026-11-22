@@ -1,22 +1,28 @@
-import { Tile } from '../assets/scripts/core/Tile';
+import { Tile, TileType } from '../assets/scripts/core/Tile';
 import { TileUtil } from '../assets/scripts/game/TileUtil';
 
-function tile(color: string): Tile {
-    return new Tile(1, color);
+function tile(type: TileType): Tile {
+    return new Tile(1, type);
 }
 
 describe('TileUtil: кадр и вписывание без `cc`', () => {
-    it('имя кадра берётся из атласа по цвету', () => {
-        expect(TileUtil.FrameName(tile('blue'))).toBe('block_blue');
-        expect(TileUtil.FrameName(tile('red'))).toBe('block_red');
-        expect(TileUtil.FrameName(tile('green'))).toBe('block_green');
-        expect(TileUtil.FrameName(tile('yellow'))).toBe('block_yellow');
-        expect(TileUtil.FrameName(tile('purple'))).toBe('block_purpure');
+    it('имя кадра берётся из атласа по типу', () => {
+        expect(TileUtil.FrameName(tile(TileType.Blue))).toBe('block_blue');
+        expect(TileUtil.FrameName(tile(TileType.Red))).toBe('block_red');
+        expect(TileUtil.FrameName(tile(TileType.Green))).toBe('block_green');
+        expect(TileUtil.FrameName(tile(TileType.Yellow))).toBe('block_yellow');
+        expect(TileUtil.FrameName(tile(TileType.Purple))).toBe('block_purpure');
     });
 
-    it('неизвестный цвет и отсутствующий тайл не дают кадра', () => {
-        expect(TileUtil.FrameName(tile('orange'))).toBe('');
-        expect(TileUtil.FrameName(tile(''))).toBe('');
+    it('супер-тайл получает кадр по типу из `superTiles.effects`', () => {
+        expect(TileUtil.FrameName(tile(TileType.Bomb))).toBe('block_bomb');
+        expect(TileUtil.FrameName(tile(TileType.BombMax))).toBe('block_bomb_max');
+        expect(TileUtil.FrameName(tile(TileType.HorizontalBlast))).toBe('horizontal_blast');
+        expect(TileUtil.FrameName(tile(TileType.VerticalBlast))).toBe('vertical_blast');
+        expect(TileUtil.FrameName(tile('unknown' as TileType))).toBe('');
+    });
+
+    it('отсутствующий тайл не даёт кадра', () => {
         expect(TileUtil.FrameName(null)).toBe('');
     });
 

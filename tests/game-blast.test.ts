@@ -1,4 +1,5 @@
 import { GameState, GameResult } from '../assets/scripts/core/GameResult';
+import { TileType } from '../assets/scripts/core/Tile';
 import { TurnStepType } from '../assets/scripts/core/TurnStepType';
 import {
     checkerboard, countTiles, createGame, expectedPoints, loadGameConfig,
@@ -108,9 +109,9 @@ describe('Game: проигрыш по ходам', () => {
 
         game.ClickCell(4, 4);
         expect(game.State).toBe(GameState.Playing);
-        game.Board.SetTile(4, 3, game.Board.CreateTile('red'));
-        game.Board.SetTile(4, 4, game.Board.CreateTile('red'));
-        game.Board.SetTile(4, 5, game.Board.CreateTile('red'));
+        game.Board.SetTile(4, 3, game.Board.CreateTile(TileType.Red));
+        game.Board.SetTile(4, 4, game.Board.CreateTile(TileType.Red));
+        game.Board.SetTile(4, 5, game.Board.CreateTile(TileType.Red));
 
         const result = game.ClickCell(4, 5);
 

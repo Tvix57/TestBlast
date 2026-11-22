@@ -76,6 +76,12 @@ export class BoardView extends cc.Component implements IBoardView, IBoardStage {
         }
     }
 
+    public SetSelected(cell: ICell | null): void {
+        if (this._controller) {
+            this._controller.SetSelected(cell);
+        }
+    }
+
     public Lock(): void {
         if (this._controller) {
             this._controller.Lock();

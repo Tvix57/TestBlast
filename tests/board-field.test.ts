@@ -1,4 +1,5 @@
 import { CeilType } from '../assets/scripts/core/Cell';
+import { TileType } from '../assets/scripts/core/Tile';
 import { countTiles, createFieldBoard, createGame, fieldFromMask, setBoard } from './helpers';
 
 /** Колонка из четырёх ячеек: блок во второй строке делит её на два отрезка. */
@@ -33,7 +34,7 @@ describe('Board: кастомная форма поля', () => {
         board.Fill();
         const neighborId = board.GetTile(0, 1).Id;
 
-        board.SetTile(0, 2, board.CreateTile('blue'));
+        board.SetTile(0, 2, board.CreateTile(TileType.Blue));
         board.Swap(board.GetCell(0, 1), board.GetCell(0, 2));
 
         expect(board.GetTile(0, 2)).toBeNull();

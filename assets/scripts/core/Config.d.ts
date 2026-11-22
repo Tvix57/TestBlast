@@ -1,5 +1,6 @@
 import { BoosterTargeting, BoosterType } from './BoosterRules';
 import { CeilType } from './Cell';
+import { TileType } from './Tile';
 
 export interface IFieldDimensions {
     rows: number;
@@ -10,7 +11,7 @@ export interface IBoardConfig extends IFieldDimensions {
     cellGapRatio: number;
     minGroupSize: number;
     repeatChance: number;
-    colors: string[];
+    colors: TileType[];
     cells?: CeilType[][] | null;
 }
 
@@ -55,12 +56,14 @@ export interface ILevelsConfig {
 }
 
 export interface IAnimationConfig {
+    swapDuration: number;
     fallDuration: number;
     fallEasing: string;
     blastDuration: number;
     blastScale: number;
     blastStagger: number;
     spawnDuration: number;
+    superSpawnDuration: number;
     shuffleDuration: number;
     invalidShakeDuration: number;
     invalidShakeOffset: number;
@@ -96,7 +99,7 @@ export interface IBoosterConfig {
 
 export interface ISuperTileRule {
     minGroupSize: number;
-    types: string[];
+    types: TileType[];
 }
 
 export interface ISuperTilesConfig {

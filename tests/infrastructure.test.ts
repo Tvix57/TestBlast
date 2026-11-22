@@ -1,7 +1,7 @@
 import { Cell, CeilType } from '../assets/scripts/core/Cell';
 import { AbstractDispatcher, Dispatcher } from '../assets/scripts/core/Dispatcher';
 import { Random } from '../assets/scripts/core/Random';
-import { Tile } from '../assets/scripts/core/Tile';
+import { Tile, TileType } from '../assets/scripts/core/Tile';
 import { randomSeries } from './helpers';
 
 describe('Cell и Tile', () => {
@@ -20,13 +20,19 @@ describe('Cell и Tile', () => {
         expect(Cell.CanHoldTile({ Row: 0, Col: 0, Type: 99 as CeilType, Tile: null })).toBe(false);
     });
 
-    it('Tile хранит идентификатор и цвет без изменений', () => {
-        const first = new Tile(1, 'blue');
-        const second = new Tile(2, 'blue');
+    it('Tile хранит идентификатор и тип без изменений', () => {
+        const first = new Tile(1, TileType.Blue);
+        const second = new Tile(2, TileType.Blue);
 
         expect(first.Id).toBe(1);
-        expect(first.Color).toBe('blue');
+        expect(first.Type).toBe(TileType.Blue);
+        expect(first.IsSuper).toBe(false);
+        expect(first.IsMatchable).toBe(true);
         expect(second.Id).not.toBe(first.Id);
+
+        const bomb = new Tile(3, TileType.Bomb);
+        expect(bomb.IsSuper).toBe(true);
+        expect(bomb.IsMatchable).toBe(false);
     });
 });
 

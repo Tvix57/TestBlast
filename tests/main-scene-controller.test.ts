@@ -1,7 +1,8 @@
+import { BoosterType } from '../assets/scripts/core/BoosterRules';
 import { GameResult, GameState } from '../assets/scripts/core/GameResult';
 import { MainSceneController } from '../assets/scripts/game/controllers/MainSceneController';
 import {
-    checkerboard, createBoardView, createHudView, createTestContext, setBoard, withCells
+    checkerboard, createBoardView, createBoostersView, createHudView, createTestContext, setBoard, withCells
 } from './helpers';
 
 const groupOfThree = withCells(checkerboard(), [[4, 3, 'B'], [4, 4, 'B'], [4, 5, 'B']]);
@@ -37,11 +38,12 @@ function createScene(options: { startDialog?: boolean } = {}) {
     const dialogs = createDialogs(options.startDialog !== false);
     const board = createBoardView();
     const hud = createHudView();
+    const boosters = createBoostersView();
     const scheduler = createScheduler();
     const controller = new MainSceneController(
-        context, dialogs as any, board as any, hud as any, scheduler
+        context, dialogs as any, board as any, hud as any, scheduler, boosters as any
     );
-    return { context, dialogs, board, hud, scheduler, controller };
+    return { context, dialogs, board, hud, boosters, scheduler, controller };
 }
 
 type IScene = ReturnType<typeof createScene>;
@@ -153,5 +155,34 @@ describe('MainSceneController: биндинг сцены через контро
 
         expect(scene.scheduler.Unscheduled).toBe(scene.scheduler.Scheduled);
         expect(scene.dialogs.ClearPauseHandler).toHaveBeenCalledWith(handler);
+    });
+
+    it('Start связывает панель бустеров с матчем и её клики', () => {
+        const scene = createScene({ startDialog: false });
+        scene.controller.Start();
+
+        expect(scene.boosters.Bind).toHaveBeenCalledWith(
+            scene.context.Session.Boosters, scene.context.Session.Rules
+        );
+        expect(scene.boosters.SetClickHandler).toHaveBeenCalledTimes(1);
+        const onBoosterClick = scene.boosters.SetClickHandler.mock.calls[0][0];
+
+        onBoosterClick(BoosterType.Bomb);
+
+        expect(scene.boosters.Select).toHaveBeenCalledWith(BoosterType.Bomb);
+    });
+
+    it('после перезапуска панель бустеров привязывается к новому матчу', () => {
+        const scene = createScene({ startDialog: false });
+        scene.controller.Start();
+        expireByTimer(scene);
+        const onRestart = scene.dialogs.OpenEndDialog.mock.calls[0][1];
+
+        onRestart();
+
+        expect(scene.boosters.Bind).toHaveBeenCalledTimes(2);
+        expect(scene.boosters.Bind).toHaveBeenLastCalledWith(
+            scene.context.Session.Boosters, scene.context.Session.Rules
+        );
     });
 });

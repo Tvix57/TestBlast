@@ -16,10 +16,9 @@ export class TileView extends cc.Component {
 
     private _cell: ICell = null;
     private _tile: Tile = null;
-    /** Резолвер текущей анимации: отмена твина должна завершать промис, иначе ход зависнет. */
     private _animationResolve: (() => void) | null = null;
-    /** Натуральный размер арта: снимается один раз, до первой подгонки узла. */
     private _artSize: ITileSize = null;
+    private _selectedScale: number = 1.08;
 
     public get Cell(): ICell {
         return this._cell;
@@ -169,6 +168,23 @@ export class TileView extends cc.Component {
             return cc.tween(this.node)
                 .to(duration, { position: cc.v3(x, y, 0), scale: 1 }, { easing: 'quadInOut' });
         });
+    }
+
+    public PlaySuperSpawn(duration: number): Promise<void> {
+        return this.playTween(() => {
+            this.node.scale = 0;
+            return cc.tween(this.node)
+                .to(duration * 0.6, { scale: 1.2 }, { easing: 'quadOut' })
+                .to(duration * 0.4, { scale: 1 }, { easing: 'quadIn' });
+        });
+    }
+
+    public PlaySelected(selected: boolean): void {
+        if (!this.node || !this.node.isValid) {
+            return;
+        }
+        cc.Tween.stopAllByTarget(this.node);
+        cc.tween(this.node).to(0.12, { scale: selected ? this._selectedScale : 1 }, { easing: 'quadOut' }).start();
     }
 
     private playTween(build: () => cc.Tween): Promise<void> {

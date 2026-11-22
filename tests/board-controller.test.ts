@@ -1,3 +1,4 @@
+import { TileType } from '../assets/scripts/core/Tile';
 import { TurnStepType } from '../assets/scripts/core/TurnStepType';
 import { BoardController } from '../assets/scripts/game/controllers/BoardController';
 import { BoardLayout } from '../assets/scripts/game/layout/BoardLayout';
@@ -182,6 +183,81 @@ describe('BoardController: поле без `cc`', () => {
             .resolves.toBeUndefined();
 
         expect(stage.Created.some((view) => view.PlayInvalid.mock.calls.length > 0)).toBe(false);
+    });
+
+    it('SetSelected подсвечивает клетку и снимает подсветку', async () => {
+        const { game, stage, controller } = await buildScene();
+        const cell = game.Board.GetCell(4, 4);
+        const view = findTileViewAt(stage, 4, 4);
+
+        controller.SetSelected(cell);
+
+        expect(view.PlaySelected).toHaveBeenCalledWith(true);
+
+        controller.SetSelected(null);
+
+        expect(view.PlaySelected).toHaveBeenLastCalledWith(false);
+    });
+
+    it('Swap меняет клетки видов и едет за swapDuration', async () => {
+        const { game, stage, controller } = await buildScene();
+        const first = findTileViewAt(stage, 0, 0);
+        const second = findTileViewAt(stage, 0, 2);
+
+        await controller.PlaySteps([{
+            Type: TurnStepType.Swap,
+            First: first.Cell,
+            Second: second.Cell,
+            FirstTile: first.Tile,
+            SecondTile: second.Tile
+        } as any]);
+
+        expect(first.Cell).toEqual(expect.objectContaining({ Row: 0, Col: 2 }));
+        expect(second.Cell).toEqual(expect.objectContaining({ Row: 0, Col: 0 }));
+        expect(first.MoveTo.mock.calls[0][2]).toBe(game.Config.animation.swapDuration);
+        expect(second.MoveTo.mock.calls[0][2]).toBe(game.Config.animation.swapDuration);
+        expect(findTileViewAt(stage, 0, 2)).toBe(first);
+        expect(findTileViewAt(stage, 0, 0)).toBe(second);
+    });
+
+    it('Spawned создаёт вид супер-тайла и проигрывает появление', async () => {
+        const { game, stage, controller } = await buildScene();
+        const cell = game.Board.GetCell(4, 4);
+        const blastView = findTileViewAt(stage, 4, 4);
+        const createdBefore = stage.Created.length;
+        const tile = game.Board.CreateTile(TileType.Bomb);
+
+        await controller.PlaySteps([{
+            Type: TurnStepType.Blast,
+            Primary: [cell],
+            Chain: [],
+            Points: 0,
+            Spawned: { Cell: cell, Tile: tile, Type: TileType.Bomb }
+        } as any]);
+
+        expect(blastView.PlayBlast).toHaveBeenCalled();
+        const spawned = stage.Created[createdBefore];
+        expect(spawned).toBeTruthy();
+        expect(spawned.SetTile).toHaveBeenCalledWith(tile, expect.objectContaining({ Row: 4, Col: 4 }));
+        expect(spawned.PlaySuperSpawn).toHaveBeenCalledWith(game.Config.animation.superSpawnDuration);
+    });
+
+    it('Chain сгорает после Primary и тоже удаляет свои виды', async () => {
+        const { game, stage, controller } = await buildScene();
+        const primary = game.Board.GetCell(4, 4);
+        const chained = game.Board.GetCell(0, 0);
+        const chainedView = findTileViewAt(stage, 0, 0);
+
+        await controller.PlaySteps([{
+            Type: TurnStepType.Blast,
+            Primary: [primary],
+            Chain: [chained],
+            Points: 0,
+            Spawned: null
+        } as any]);
+
+        expect(chainedView.PlayBlast).toHaveBeenCalled();
+        expect(stage.Released).toContain(chainedView);
     });
 });
 

@@ -1,4 +1,5 @@
 import { ConfigValidator } from '../assets/scripts/core/ConfigValidator';
+import { TileType } from '../assets/scripts/core/Tile';
 import { loadBoosterConfig, loadFieldConfig, loadFieldConfigs, loadGameConfig } from './helpers';
 
 describe('Валидация конфигов', () => {
@@ -138,8 +139,12 @@ describe('Валидация конфигов', () => {
         expect(() => ConfigValidator.ValidateGame(zeroTarget)).toThrow(/targetScore/);
 
         const fewColors = loadGameConfig();
-        fewColors.board.colors = ['blue'];
+        fewColors.board.colors = [TileType.Blue];
         expect(() => ConfigValidator.ValidateGame(fewColors)).toThrow(/colors/);
+
+        const unknownColor = loadGameConfig();
+        unknownColor.board.colors = [TileType.Blue, 'orange' as TileType];
+        expect(() => ConfigValidator.ValidateGame(unknownColor)).toThrow(/unknown tile type/);
 
         const levelsBeyondPalette = loadGameConfig();
         levelsBeyondPalette.levels.colorsMax = levelsBeyondPalette.board.colors.length + 1;
@@ -267,6 +272,10 @@ describe('Валидация конфигов', () => {
         const unknownTargeting = loadBoosterConfig();
         (unknownTargeting.boosters[0] as any).targeting = 'area';
         expect(() => ConfigValidator.ValidateBoosters(unknownTargeting)).toThrow(/unknown targeting/);
+
+        const unknownSuper = loadBoosterConfig();
+        (unknownSuper.superTiles.spawnRules[0].types as any) = ['nope'];
+        expect(() => ConfigValidator.ValidateBoosters(unknownSuper)).toThrow(/unknown super tile type/);
     });
 
     it('валидатор не мутирует конфиг', () => {

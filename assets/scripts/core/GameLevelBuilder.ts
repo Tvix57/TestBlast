@@ -1,6 +1,7 @@
 import { IBoardConfig, IGameConfig, ILevelsConfig, IMatchConfig, IRandomConfig } from './Config';
 import { FieldLayout, IFieldLayout } from './FieldLayout';
 import { IGameInfo } from './GameSession';
+import { TileType } from './Tile';
 
 /** Готовая раскладка: паспорт матча (уровень/вариант поля/сид) + конфиг с числами уровня. */
 export interface ILevelSetup extends IGameInfo {
@@ -115,7 +116,7 @@ export class GameLevelBuilder {
         return { baseSeed: this._baseSeed };
     }
 
-    private static resolveColors(palette: string[], levels: ILevelsConfig, level: number): string[] {
+    private static resolveColors(palette: TileType[], levels: ILevelsConfig, level: number): TileType[] {
         const ceiling = Math.min(levels.colorsMax, palette.length);
         const count = Math.min(ceiling, levels.colorsStart + (level - 1) * levels.colorsPerLevel);
         return palette.slice(0, Math.max(2, count));

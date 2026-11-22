@@ -1,4 +1,5 @@
 import { Random } from '../assets/scripts/core/Random';
+import { TileType } from '../assets/scripts/core/Tile';
 import {
     checkerboard, countTiles, createBoard, fillColors, loadGameConfig, setBoard, withCells
 } from './helpers';
@@ -13,7 +14,7 @@ describe('Board: матрица поля', () => {
         expect(countTiles(board)).toBe(config.board.columns * config.board.rows);
         for (let row = 0; row < board.Rows; row++) {
             for (let col = 0; col < board.Columns; col++) {
-                expect(config.board.colors).toContain(board.GetTile(row, col).Color);
+                expect(config.board.colors).toContain(board.GetTile(row, col).Type);
             }
         }
     });
@@ -44,28 +45,28 @@ describe('Board: матрица поля', () => {
 
     it('CreateRandomTile детерминирован при одинаковом сиде', () => {
         const board = createBoard(config, 42);
-        const firstColors = new Array(20).fill('').map(() => board.CreateRandomTile().Color);
+        const firstColors = new Array(20).fill('').map(() => board.CreateRandomTile().Type);
         Random.Reset(42);
-        const secondColors = new Array(20).fill('').map(() => board.CreateRandomTile().Color);
+        const secondColors = new Array(20).fill('').map(() => board.CreateRandomTile().Type);
         expect(firstColors).toEqual(secondColors);
     });
 
-    it('CreateTile выдаёт уникальные Id и указанный цвет', () => {
+    it('CreateTile выдаёт уникальные Id и указанный тип', () => {
         const board = createBoard(config);
 
-        const first = board.CreateTile('blue');
-        const second = board.CreateTile('red');
+        const first = board.CreateTile(TileType.Blue);
+        const second = board.CreateTile(TileType.Red);
 
-        expect(first.Color).toBe('blue');
-        expect(second.Color).toBe('red');
+        expect(first.Type).toBe(TileType.Blue);
+        expect(second.Type).toBe(TileType.Red);
         expect(first.Id).not.toBe(second.Id);
     });
 
-    it('CreateRandomTile с цветом вне палитры выбирает любой допустимый цвет', () => {
+    it('CreateRandomTile с типом вне палитры выбирает любой допустимый тип', () => {
         const board = createBoard(config);
 
         for (let index = 0; index < 20; index++) {
-            expect(config.board.colors).toContain(board.CreateRandomTile('unknown').Color);
+            expect(config.board.colors).toContain(board.CreateRandomTile('unknown' as TileType).Type);
         }
     });
 
@@ -73,8 +74,8 @@ describe('Board: матрица поля', () => {
         const board = createBoard(config);
         board.Fill();
 
-        board.SetTile(-1, 0, board.CreateTile('red'));
-        board.SetTile(0, config.board.columns, board.CreateTile('red'));
+        board.SetTile(-1, 0, board.CreateTile(TileType.Red));
+        board.SetTile(0, config.board.columns, board.CreateTile(TileType.Red));
         expect(countTiles(board)).toBe(config.board.rows * config.board.columns);
 
         board.Clear();
@@ -132,7 +133,7 @@ describe('Board: вероятность повтора цвета', () => {
         const spawns = board.Refill();
 
         expect(spawns).toHaveLength(2);
-        expect(spawns[1].Tile.Color).toBe(spawns[0].Tile.Color);
+        expect(spawns[1].Tile.Type).toBe(spawns[0].Tile.Type);
     });
 
     it('repeatChance вне [0, 1] и NaN приводятся к допустимым значениям', () => {
@@ -185,8 +186,8 @@ describe('Board: поиск группы', () => {
         const board = createBoard(config);
         setBoard(board, checkerboard());
         expect(board.HasGroup(2)).toBe(false);
-        board.SetTile(0, 0, board.CreateTile('red'));
-        board.SetTile(0, 1, board.CreateTile('red'));
+        board.SetTile(0, 0, board.CreateTile(TileType.Red));
+        board.SetTile(0, 1, board.CreateTile(TileType.Red));
         expect(board.HasGroup(2)).toBe(true);
         expect(board.HasGroup(3)).toBe(false);
         expect(board.FindFirstGroup(2).length).toBeGreaterThanOrEqual(2);

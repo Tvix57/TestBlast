@@ -1,7 +1,7 @@
 import { Cell, CeilType, ICell } from './Cell';
 import { IBoardConfig } from './Config';
 import { Random } from './Random';
-import { Tile } from './Tile';
+import { Tile, TileType } from './Tile';
 
 export interface ITileMove {
     Tile: Tile;
@@ -82,24 +82,24 @@ export class Board {
         cell.Tile = tile;
     }
 
-    public CreateTile(color: string): Tile {
+    public CreateTile(type: TileType): Tile {
         this._nextTileId++;
-        return new Tile(this._nextTileId, color);
+        return new Tile(this._nextTileId, type);
     }
 
-    public CreateRandomTile(previousColor: string = ''): Tile {
-        return this.CreateTile(this.pickColor(previousColor));
+    public CreateRandomTile(previousType: TileType = null): Tile {
+        return this.CreateTile(this.pickType(previousType));
     }
 
-    private pickColor(previousColor: string): string {
+    private pickType(previousType: TileType): TileType {
         const colors = this._config.colors;
-        if (!previousColor || colors.length < 2 || colors.indexOf(previousColor) < 0) {
+        if (!previousType || colors.length < 2 || colors.indexOf(previousType) < 0) {
             return colors[Random.NextInt(colors.length)];
         }
         const otherChance = (1 - this._repeatChance) / (colors.length - 1);
         let roll = Random.Next();
         for (let index = 0; index < colors.length; index++) {
-            roll -= colors[index] === previousColor ? this._repeatChance : otherChance;
+            roll -= colors[index] === previousType ? this._repeatChance : otherChance;
             if (roll < 0) {
                 return colors[index];
             }
@@ -117,15 +117,15 @@ export class Board {
 
     public Fill(): ITilePlacement[] {
         const placements: ITilePlacement[] = [];
-        let previousColor = '';
+        let previousType: TileType = null;
         for (let row = 0; row < this.Rows; row++) {
             for (let col = 0; col < this.Columns; col++) {
                 const cell = this._cells[row][col];
                 if (!Cell.CanHoldTile(cell) || cell.Tile) {
                     continue;
                 }
-                const tile = this.CreateRandomTile(previousColor);
-                previousColor = tile.Color;
+                const tile = this.CreateRandomTile(previousType);
+                previousType = tile.Type;
                 cell.Tile = tile;
                 placements.push({ Tile: tile, Cell: cell });
             }
@@ -135,17 +135,17 @@ export class Board {
 
     public FindGroup(row: number, col: number): ICell[] {
         const start = this.GetCell(row, col);
-        if (!start || !Cell.CanHoldTile(start) || !start.Tile) {
+        if (!start || !Cell.CanHoldTile(start) || !start.Tile || !start.Tile.IsMatchable) {
             return [];
         }
-        const color = start.Tile.Color;
+        const type = start.Tile.Type;
         const visited = new Set<number>();
         const result: ICell[] = [];
         const queue: ICell[] = [start];
         while (queue.length > 0) {
             const cell = queue.shift();
             const key = cell.Row * this.Columns + cell.Col;
-            if (visited.has(key) || !cell.Tile || cell.Tile.Color !== color) {
+            if (visited.has(key) || !cell.Tile || !cell.Tile.IsMatchable || cell.Tile.Type !== type) {
                 continue;
             }
             visited.add(key);
@@ -165,7 +165,8 @@ export class Board {
     public FindFirstGroup(minGroupSize: number): ICell[] {
         for (let row = 0; row < this.Rows; row++) {
             for (let col = 0; col < this.Columns; col++) {
-                if (!this._cells[row][col].Tile) {
+                const tile = this._cells[row][col].Tile;
+                if (!tile || !tile.IsMatchable) {
                     continue;
                 }
                 const group = this.FindGroup(row, col);
@@ -205,21 +206,21 @@ export class Board {
 
     public Refill(): ITileSpawn[] {
         const spawns: ITileSpawn[] = [];
-        let previousColor = '';
+        let previousType: TileType = null;
         for (let col = 0; col < this.Columns; col++) {
             let segmentTop = 0;
             for (let row = 0; row <= this.Rows; row++) {
                 if (row < this.Rows && Cell.CanHoldTile(this._cells[row][col])) {
                     continue;
                 }
-                previousColor = this.refillSegment(spawns, col, segmentTop, row - 1, previousColor);
+                previousType = this.refillSegment(spawns, col, segmentTop, row - 1, previousType);
                 segmentTop = row + 1;
             }
         }
         return spawns;
     }
 
-    private refillSegment(spawns: ITileSpawn[], col: number, top: number, bottom: number, previousColor: string): string {
+    private refillSegment(spawns: ITileSpawn[], col: number, top: number, bottom: number, previousType: TileType): TileType {
         let emptyCount = 0;
         for (let row = top; row <= bottom; row++) {
             if (!this._cells[row][col].Tile) {
@@ -227,16 +228,16 @@ export class Board {
             }
         }
         if (emptyCount === 0) {
-            return previousColor;
+            return previousType;
         }
-        let lastColor = previousColor;
+        let lastType = previousType;
         for (let row = top; row <= bottom; row++) {
             const cell = this._cells[row][col];
             if (cell.Tile) {
                 continue;
             }
-            const tile = this.CreateRandomTile(lastColor);
-            lastColor = tile.Color;
+            const tile = this.CreateRandomTile(lastType);
+            lastType = tile.Type;
             cell.Tile = tile;
             spawns.push({
                 Tile: tile,
@@ -244,7 +245,7 @@ export class Board {
                 FromRow: row - emptyCount
             });
         }
-        return lastColor;
+        return lastType;
     }
 
     public Swap(first: ICell, second: ICell): void {
@@ -264,7 +265,7 @@ export class Board {
         for (let row = 0; row < this.Rows; row++) {
             for (let col = 0; col < this.Columns; col++) {
                 const cell = this._cells[row][col];
-                if (cell.Tile && Cell.CanHoldTile(cell)) {
+                if (cell.Tile && cell.Tile.IsMatchable && Cell.CanHoldTile(cell)) {
                     cells.push(cell);
                     tiles.push(cell.Tile);
                 }
