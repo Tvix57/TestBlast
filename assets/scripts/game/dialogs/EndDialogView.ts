@@ -9,6 +9,8 @@ export interface IEndDialogData {
     Target: number;
     MovesLeft: number;
     MovesLimit: number;
+    TimeLeft?: number;
+    TimeLimit?: number;
 }
 
 @ccclass
@@ -30,15 +32,10 @@ export class EndDialogView extends DialogView {
 
     protected onLoad(): void {
         super.onLoad();
-        if (this.restartButton) {
-            this.restartButton.node.on('click', this.onRestartClick, this);
-        }
+        this.BindConfirmButton(this.restartButton);
     }
 
     protected onDestroy(): void {
-        if (this.restartButton && this.restartButton.node) {
-            this.restartButton.node.off('click', this.onRestartClick, this);
-        }
         super.onDestroy();
     }
 
@@ -50,16 +47,28 @@ export class EndDialogView extends DialogView {
             this.scoreLabel.string = 'Очки: ' + data.Score + ' / ' + data.Target;
         }
         if (this.detailLabel) {
-            this.detailLabel.string = data.MovesLimit > 0
-                ? 'Осталось ходов: ' + data.MovesLeft
-                : 'Ходы не ограничены';
+            this.detailLabel.string = this.buildDetail(data);
         }
         if (this.restartLabel) {
             this.restartLabel.string = 'ЗАНОВО';
         }
     }
 
-    private onRestartClick(): void {
-        this.confirm();
+    private buildDetail(data: IEndDialogData): string {
+        const parts: string[] = [];
+        parts.push(data.MovesLimit > 0
+            ? 'Осталось ходов: ' + data.MovesLeft
+            : 'Ходы не ограничены');
+        if ((data.TimeLimit || 0) > 0 && data.TimeLeft !== undefined) {
+            parts.push('Время: ' + this.formatTime(data.TimeLeft));
+        }
+        return parts.join(' · ');
+    }
+
+    private formatTime(remainingSeconds: number): string {
+        const total = Math.max(0, Math.ceil(remainingSeconds));
+        const minutes = Math.floor(total / 60);
+        const seconds = total % 60;
+        return minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
     }
 }

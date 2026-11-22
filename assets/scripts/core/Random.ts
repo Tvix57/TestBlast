@@ -1,3 +1,5 @@
+import { Seeds } from './Seeds';
+
 /**
  * Детерминированный генератор псевдослучайных чисел — простой линейный конгруэнтный
  * (Lehmer / MINSTD). Сид приходит из паспорта матча (`GameSession`), поэтому поле
@@ -22,8 +24,7 @@ export class Random {
 
     /** Перезапуск последовательности: 0/NaN/∞ в проекте означают «сида нет» и заменяются на 1. */
     public static Reset(seed: number): void {
-        const value = Math.floor(Math.abs(seed));
-        Random._state = isFinite(value) ? 1 + (value % (Random.MODULUS - 1)) : 1;
+        Random._state = Seeds.ForRandom(seed);
     }
 
     /** Следующее число в [0, 1). */

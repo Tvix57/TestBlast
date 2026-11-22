@@ -38,11 +38,6 @@ export class MovesCounter extends AbstractDispatcher<IMovesHandler> {
         this.post();
     }
 
-    public Reset(): void {
-        this._left = this._limit;
-        this.post();
-    }
-
     private post(): void {
         this._dispatcher.Post((handler) => handler.OnMovesChanged(this._left, this._limit));
     }

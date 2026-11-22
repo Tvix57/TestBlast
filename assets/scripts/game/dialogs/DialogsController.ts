@@ -1,7 +1,8 @@
-import { Root } from '../Root';
+import { GameSession } from '../../core/GameSession';
 import { EndDialogView, IEndDialogData } from './EndDialogView';
-import { DialogType, IDialogOptions } from './IDialogManager';
+import { DialogType, IDialogManager, IDialogOptions } from './IDialogManager';
 import { StartDialogView } from './StartDialogView';
+import { TextUtil } from './TextUtil';
 
 const START_TITLE = 'ВЗРЫВ ТАЙЛОВ';
 const START_BUTTON = 'ИГРАТЬ';
@@ -9,8 +10,13 @@ const START_BUTTON = 'ИГРАТЬ';
 type IDialogCallOptions = Omit<IDialogOptions, 'Configure'>;
 
 export class DialogsController {
+    constructor(
+        private _dialogs: IDialogManager,
+        private _getSession: () => GameSession
+    ) {}
+
     public OpenStartDialog(onPlay: () => void, options: IDialogCallOptions = {}): boolean {
-        return Root.Instance.ResolveDialogManager().OpenDialog(DialogType.StartDialog, {
+        return this._dialogs.OpenDialog(DialogType.StartDialog, {
             ...options,
             Configure: (view) => {
                 const dialog = view as StartDialogView;
@@ -21,7 +27,7 @@ export class DialogsController {
     }
 
     public OpenEndDialog(data: IEndDialogData, onRestart: () => void, options: IDialogCallOptions = {}): boolean {
-        return Root.Instance.ResolveDialogManager().OpenDialog(DialogType.EndDialog, {
+        return this._dialogs.OpenDialog(DialogType.EndDialog, {
             ...options,
             Configure: (view) => {
                 const dialog = view as EndDialogView;
@@ -32,34 +38,14 @@ export class DialogsController {
     }
 
     public SetPauseHandler(handler: (paused: boolean) => void): void {
-        Root.Instance.ResolveDialogManager().SetPauseHandler(handler);
+        this._dialogs.SetPauseHandler(handler);
     }
 
     public ClearPauseHandler(handler: (paused: boolean) => void): void {
-        if (Root.Instance.IsReady) {
-            Root.Instance.ResolveDialogManager().ClearPauseHandler(handler);
-        }
+        this._dialogs.ClearPauseHandler(handler);
     }
 
     private buildRulesText(): string {
-        const game = Root.Instance.Context.Session;
-        const config = game.Config;
-        const match = config.match;
-        const limits: string[] = [];
-        if (match.movesLimit > 0) {
-            limits.push(match.movesLimit + ' ходов');
-        }
-        if (match.timeLimitSeconds > 0) {
-            limits.push(match.timeLimitSeconds + ' секунд');
-        }
-        const lines: string[] = [];
-        lines.push('Уровень ' + game.Level + '.');
-        lines.push('Цель: ' + match.targetScore + ' очков.');
-        if (limits.length > 0) {
-            lines.push('Лимиты: ' + limits.join(' и ') + '.');
-        }
-        lines.push('Жмите на группу из ' + config.board.minGroupSize + '+ тайлов одного цвета.');
-        lines.push('Группа 5+ оставляет супер-тайл.');
-        return lines.join('\n');
+        return TextUtil.BuildRules(this._getSession());
     }
 }

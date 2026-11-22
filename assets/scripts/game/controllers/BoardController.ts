@@ -3,7 +3,8 @@ import { Cell, ICell } from '../../core/Cell';
 import { IAnimationConfig } from '../../core/Config';
 import { Tile } from '../../core/Tile';
 import { IBlastStep, IDropTilesStep, IRefillStep, IShuffleStep, ISuperSpawn, ISwapStep } from '../../core/TurnResult';
-import { ITurnStep, TurnStepType } from '../../core/TurnStepType';
+import { ITurnStep } from '../../core/TurnResult';
+import { TurnStepType } from '../../core/TurnStepType';
 import { IBoardStage } from '../IBoardStage';
 import { BoardLayout, IBoardMetrics, IBoardPosition } from '../layout/BoardLayout';
 import { TileView } from '../TileView';
@@ -21,6 +22,7 @@ export class BoardController {
     private _animation: IAnimationConfig = null;
     private _clickHandler: (cell: ICell) => void = null;
     private _views: (TileView | null)[][] = [];
+    private _byTileId: Map<number, TileView> = new Map();
     private _metrics: IBoardMetrics = { cellSize: 0, step: 0, boardWidth: 0, boardHeight: 0 };
     private _activity: BoardActivity = BoardActivity.Idle;
     private _token: number = 0;
@@ -78,6 +80,7 @@ export class BoardController {
         this._activity = BoardActivity.Idle;
         this._clickHandler = null;
         this._views = [];
+        this._byTileId.clear();
     }
 
     public Build(): Promise<void> {
@@ -317,6 +320,7 @@ export class BoardController {
     private clearViews(): void {
         this._selectedCell = null;
         this._views = this.createCellIndex();
+        this._byTileId.clear();
         this._stage.ClearTiles();
     }
 
@@ -365,6 +369,9 @@ export class BoardController {
         const position = this.positionOf(fromRow, cell.Col);
         view.PlaceAt(position.x, position.y);
         this.setViewByCell(cell, view);
+        if (tile) {
+            this._byTileId.set(tile.Id, view);
+        }
         return view;
     }
 
@@ -391,21 +398,15 @@ export class BoardController {
         if (!tile) {
             return null;
         }
-        for (let row = 0; row < this._views.length; row++) {
-            const line = this._views[row];
-            for (let col = 0; col < line.length; col++) {
-                const view = line[col];
-                if (view && view.Tile === tile) {
-                    return view;
-                }
-            }
-        }
-        return null;
+        return this._byTileId.get(tile.Id) || null;
     }
 
     private destroyView(view: TileView): void {
         if (!view || !view.isValid) {
             return;
+        }
+        if (view.Tile) {
+            this._byTileId.delete(view.Tile.Id);
         }
         if (view.Cell) {
             if (this._selectedCell && Cell.Same(this._selectedCell, view.Cell)) {

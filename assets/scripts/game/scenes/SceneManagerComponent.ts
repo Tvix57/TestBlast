@@ -1,4 +1,5 @@
 import { DefaultSceneLayout, ISceneManager, SceneType } from './ISceneManager';
+import { NodeUtil } from '../ui/NodeUtil';
 
 const { ccclass, property } = cc._decorator;
 
@@ -30,7 +31,12 @@ export class SceneManagerComponent extends cc.Component implements ISceneManager
     }
 
     public OpenScene(sceneType: SceneType, layout: number): cc.Node {
-        const node = cc.instantiate(this.scenePrefabs[sceneType]);
+        const prefab = this.scenePrefabs ? this.scenePrefabs[sceneType] : null;
+        if (!prefab) {
+            cc.error('SceneManagerComponent: не задан префаб для SceneType ' + sceneType);
+            return null;
+        }
+        const node = cc.instantiate(prefab);
         node.setPosition(0, 0, 0);
         this.closeByLayout(layout);
         this.node.addChild(node);
@@ -43,7 +49,7 @@ export class SceneManagerComponent extends cc.Component implements ISceneManager
         if (!entry) {
             return false;
         }
-        this.destroyNode(entry.Node);
+        NodeUtil.Destroy(entry.Node);
         return true;
     }
 
@@ -69,15 +75,5 @@ export class SceneManagerComponent extends cc.Component implements ISceneManager
             }
             this.CloseScene();
         }
-    }
-
-    private destroyNode(node: cc.Node): void {
-        if (!node || !node.isValid) {
-            return;
-        }
-        if (node.parent) {
-            node.removeFromParent();
-        }
-        node.destroy();
     }
 }

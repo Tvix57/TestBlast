@@ -2,27 +2,11 @@ import { BoosterType } from '../assets/scripts/core/BoosterRules';
 import { GameResult, GameState } from '../assets/scripts/core/GameResult';
 import { MainSceneController } from '../assets/scripts/game/controllers/MainSceneController';
 import {
-    checkerboard, createBoardView, createBoostersView, createHudView, createTestContext, setBoard, withCells
+    checkerboard, createBoardView, createBoostersView, createHudView, createScheduler, createTestContext,
+    setBoard, withCells
 } from './helpers';
 
 const groupOfThree = withCells(checkerboard(), [[4, 3, 'B'], [4, 4, 'B'], [4, 5, 'B']]);
-
-/** Фейк планировщика: запоминает колбэк, интервал и снятие — без `cc`. */
-function createScheduler() {
-    const scheduler = {
-        Scheduled: null as null | (() => void),
-        Unscheduled: null as null | (() => void),
-        Interval: 0,
-        Schedule(callback: () => void, intervalSeconds: number): void {
-            scheduler.Scheduled = callback;
-            scheduler.Interval = intervalSeconds;
-        },
-        Unschedule(callback: () => void): void {
-            scheduler.Unscheduled = callback;
-        }
-    };
-    return scheduler;
-}
 
 function createDialogs(startDialog: boolean = true) {
     return {
@@ -41,7 +25,7 @@ function createScene(options: { startDialog?: boolean } = {}) {
     const boosters = createBoostersView();
     const scheduler = createScheduler();
     const controller = new MainSceneController(
-        context, dialogs as any, board as any, hud as any, scheduler, boosters as any
+        context, dialogs as any, board, hud, scheduler, boosters
     );
     return { context, dialogs, board, hud, boosters, scheduler, controller };
 }
@@ -133,6 +117,18 @@ describe('MainSceneController: биндинг сцены через контро
         expect(scene.context.Session.State).toBe(GameState.Playing);
         expect(scene.board.Build).toHaveBeenCalledTimes(2);
         expect(scene.hud.Bind).toHaveBeenLastCalledWith(scene.context.Session);
+    });
+
+    it('финальный диалог получает остаток времени при включённом лимите', () => {
+        const scene = createScene({ startDialog: false });
+        scene.controller.Start();
+        expireByTimer(scene);
+
+        const data = scene.dialogs.OpenEndDialog.mock.calls[0][0];
+
+        expect(data.MovesLimit).toBeGreaterThan(0);
+        expect(data.TimeLimit).toBeGreaterThan(0);
+        expect(data.TimeLeft).toBe(0);
     });
 
     it('LoadField переключает вариант поля и сразу начинает новый матч', () => {

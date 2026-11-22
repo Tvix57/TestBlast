@@ -21,6 +21,10 @@ export class Cell {
         return first.Row === second.Row && first.Col === second.Col;
     }
 
+    public static Key(row: number, col: number, columns: number): number {
+        return row * columns + col;
+    }
+
     public static CanHoldType(type: CeilType): boolean {
         switch (type) {
             case CeilType.Normal:

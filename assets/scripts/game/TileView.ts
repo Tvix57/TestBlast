@@ -1,5 +1,6 @@
 import { ICell } from '../core/Cell';
 import { Tile } from '../core/Tile';
+import { AnimationUtil } from './ui/AnimationUtil';
 import { ITileSize, TileUtil } from './TileUtil';
 
 const { ccclass, property } = cc._decorator;
@@ -16,9 +17,7 @@ export class TileView extends cc.Component {
 
     private _cell: ICell = null;
     private _tile: Tile = null;
-    private _animationResolve: (() => void) | null = null;
     private _artSize: ITileSize = null;
-    private _selectedScale: number = 1.08;
 
     public get Cell(): ICell {
         return this._cell;
@@ -38,10 +37,7 @@ export class TileView extends cc.Component {
     }
 
     public CancelAnimations(): void {
-        if (this.node && this.node.isValid) {
-            cc.Tween.stopAllByTarget(this.node);
-        }
-        this.finishAnimation();
+        AnimationUtil.Cancel(this.node);
     }
 
     public ResetVisual(): void {
@@ -92,9 +88,15 @@ export class TileView extends cc.Component {
         }
     }
 
+    private static _atlasWarned: boolean = false;
+
     private resolveAtlas(): cc.SpriteAtlas {
         if (this.atlas) {
             return this.atlas;
+        }
+        if (!TileView._atlasWarned && this.body) {
+            TileView._atlasWarned = true;
+            cc.warn('TileView: atlas не задан в префабе, используется атлас спрайта');
         }
         return this.body ? (this.body as any)._atlas || null : null;
     }
@@ -149,17 +151,7 @@ export class TileView extends cc.Component {
     }
 
     public PlayInvalid(duration: number, offset: number): Promise<void> {
-        return this.playTween(() => {
-            const startX = this.node.x;
-            const step = duration / 3;
-            return cc.tween(this.node)
-                .by(step, { position: cc.v3(offset, 0, 0) })
-                .by(step, { position: cc.v3(-offset * 2, 0, 0) })
-                .by(step, { position: cc.v3(offset, 0, 0) })
-                .call(() => {
-                    this.node.x = startX;
-                });
-        });
+        return AnimationUtil.PlayShake(this.node, offset, duration);
     }
 
     public PlayShuffleMove(x: number, y: number, duration: number): Promise<void> {
@@ -183,24 +175,11 @@ export class TileView extends cc.Component {
         if (!this.node || !this.node.isValid) {
             return;
         }
-        cc.Tween.stopAllByTarget(this.node);
-        cc.tween(this.node).to(0.12, { scale: selected ? this._selectedScale : 1 }, { easing: 'quadOut' }).start();
+        AnimationUtil.Select(this.node, selected);
     }
 
     private playTween(build: () => cc.Tween): Promise<void> {
-        this.CancelAnimations();
-        return new Promise<void>((resolve) => {
-            this._animationResolve = resolve;
-            build().call(() => this.finishAnimation()).start();
-        });
-    }
-
-    private finishAnimation(): void {
-        const resolve = this._animationResolve;
-        this._animationResolve = null;
-        if (resolve) {
-            resolve();
-        }
+        return AnimationUtil.Play(this.node, build);
     }
 
     private onTouchEnd(): void {

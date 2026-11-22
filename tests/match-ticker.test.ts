@@ -1,23 +1,6 @@
 import { MatchTimer } from '../assets/scripts/core/MatchTimer';
 import { MatchTicker } from '../assets/scripts/game/controllers/MatchTicker';
-import { createClock } from './helpers';
-
-/** Фейк планировщика: запоминает колбэк, интервал и снятие — без `cc`. */
-function createScheduler() {
-    const scheduler = {
-        Scheduled: null as null | (() => void),
-        Unscheduled: null as null | (() => void),
-        Interval: 0,
-        Schedule(callback: () => void, intervalSeconds: number): void {
-            scheduler.Scheduled = callback;
-            scheduler.Interval = intervalSeconds;
-        },
-        Unschedule(callback: () => void): void {
-            scheduler.Unscheduled = callback;
-        }
-    };
-    return scheduler;
-}
+import { createClock, createScheduler } from './helpers';
 
 describe('MatchTicker: ежесекундный тик таймера матча', () => {
     it('Start ставит тик на секунду и сразу отдаёт время в HUD', () => {
@@ -121,5 +104,45 @@ describe('MatchTicker: ежесекундный тик таймера матча
         ticker.Refresh();
 
         expect(onTime).toHaveBeenLastCalledWith(10, 10);
+    });
+
+    it('повторный Start не создаёт второй таймер', () => {
+        const timer = new MatchTimer(60, () => 0);
+        timer.Start();
+        const scheduler = createScheduler();
+        const ticker = new MatchTicker(scheduler, () => timer, () => undefined, () => undefined);
+
+        ticker.Start();
+        ticker.Start();
+        ticker.Start();
+
+        expect(scheduler.ScheduleCount).toBe(1);
+    });
+
+    it('повторный Stop снимает таймер один раз', () => {
+        const timer = new MatchTimer(60, () => 0);
+        timer.Start();
+        const scheduler = createScheduler();
+        const ticker = new MatchTicker(scheduler, () => timer, () => undefined, () => undefined);
+        ticker.Start();
+
+        ticker.Stop();
+        ticker.Stop();
+
+        expect(scheduler.UnscheduleCount).toBe(1);
+    });
+
+    it('после Stop новый Start снова ставит таймер', () => {
+        const timer = new MatchTimer(60, () => 0);
+        timer.Start();
+        const scheduler = createScheduler();
+        const ticker = new MatchTicker(scheduler, () => timer, () => undefined, () => undefined);
+
+        ticker.Start();
+        ticker.Stop();
+        ticker.Start();
+
+        expect(scheduler.ScheduleCount).toBe(2);
+        expect(scheduler.UnscheduleCount).toBe(1);
     });
 });

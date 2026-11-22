@@ -1,4 +1,4 @@
-import { BoosterTargeting, BoosterType } from './BoosterRules';
+import { BoosterTargeting, BoosterType } from './BoosterTypes';
 import { CeilType } from './Cell';
 import { TileType } from './Tile';
 

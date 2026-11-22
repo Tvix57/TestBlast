@@ -2,7 +2,7 @@ import { ITileMove, ITilePlacement, ITileSpawn } from './Board';
 import { ICell } from './Cell';
 import { GameResult } from './GameResult';
 import { Tile, TileType } from './Tile';
-import { ITurnStep, TurnStepType } from './TurnStepType';
+import { TurnStepType } from './TurnStepType';
 
 export interface ISuperSpawn {
     Cell: ICell;
@@ -37,9 +37,9 @@ export interface ISwapStep {
     Type: TurnStepType.Swap;
     First: ICell;
     Second: ICell;
-    FirstTile: Tile;
-    SecondTile: Tile;
 }
+
+export type ITurnStep = IBlastStep | IDropTilesStep | IRefillStep | IShuffleStep | ISwapStep;
 
 export interface ITurnResult {
     Steps: ITurnStep[];

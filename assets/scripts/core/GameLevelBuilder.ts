@@ -1,6 +1,7 @@
 import { IBoardConfig, IGameConfig, ILevelsConfig, IMatchConfig, IRandomConfig } from './Config';
 import { FieldLayout, IFieldLayout } from './FieldLayout';
 import { IGameInfo } from './GameSession';
+import { Seeds } from './Seeds';
 import { TileType } from './Tile';
 
 /** Готовая раскладка: паспорт матча (уровень/вариант поля/сид) + конфиг с числами уровня. */
@@ -34,7 +35,7 @@ export class GameLevelBuilder {
     constructor(config: IGameConfig, baseSeed?: number, fields?: IFieldLayout[]) {
         this._config = config;
         const seed = baseSeed === undefined ? (config.random ? config.random.baseSeed : 0) : baseSeed;
-        this._baseSeed = GameLevelBuilder.normalizeSeed(seed);
+        this._baseSeed = Seeds.ForBase(seed);
         this._fields = fields && fields.length
             ? fields
             : [FieldLayout.Standard(config.board.rows, config.board.columns)];
@@ -60,16 +61,11 @@ export class GameLevelBuilder {
     }
 
     public static RandomSeed(): number {
-        return Math.floor(Date.now() * Math.random()) + 1;
+        return Seeds.Random();
     }
 
     private seedFor(level: number, fieldVariant: number): number {
-        return this._baseSeed + level * GameLevelBuilder.VARIANTS_PER_LEVEL + fieldVariant;
-    }
-
-    private static normalizeSeed(seed: number): number {
-        const value = Math.floor(Math.abs(seed));
-        return isFinite(value) && value > 0 ? value : GameLevelBuilder.RandomSeed();
+        return Seeds.ForLevel(this._baseSeed, level, fieldVariant, GameLevelBuilder.VARIANTS_PER_LEVEL);
     }
 
     private buildConfig(level: number, levels: ILevelsConfig, fieldVariant: number): IGameConfig {

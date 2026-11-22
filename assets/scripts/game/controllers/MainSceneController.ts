@@ -5,15 +5,15 @@ import { DialogsController } from '../dialogs/DialogsController';
 import { GameController } from '../GameController';
 import { IBoardView } from '../IBoardView';
 import { IBoostersView } from '../IBoostersView';
+import { IHudView } from '../IHudView';
 import { Root } from '../Root';
-import { HudView } from '../views/HudView';
 import { IMatchScheduler, MatchTicker } from './MatchTicker';
 
 export class MainSceneController {
     private _context: GameContext;
     private _dialogs: DialogsController;
     private _boardView: IBoardView;
-    private _hudView: HudView;
+    private _hudView: IHudView;
     private _boostersView: IBoostersView;
     private _gameController: GameController = null;
     private _pauseHandler: (paused: boolean) => void = null;
@@ -21,12 +21,14 @@ export class MainSceneController {
 
     public static Create(
         boardView: IBoardView,
-        hudView: HudView,
+        hudView: IHudView,
         scheduler: IMatchScheduler,
         boostersView: IBoostersView
     ): MainSceneController {
         return new MainSceneController(
-            Root.Instance.Context, new DialogsController(), boardView, hudView, scheduler, boostersView
+            Root.Instance.Context,
+            new DialogsController(Root.Instance.ResolveDialogManager(), () => Root.Instance.Context.Session),
+            boardView, hudView, scheduler, boostersView
         );
     }
 
@@ -34,7 +36,7 @@ export class MainSceneController {
         context: GameContext,
         dialogs: DialogsController,
         boardView: IBoardView,
-        hudView: HudView,
+        hudView: IHudView,
         scheduler: IMatchScheduler,
         boostersView: IBoostersView
     ) {
@@ -149,7 +151,9 @@ export class MainSceneController {
             Score: session.Score.Get(),
             Target: session.TargetScore,
             MovesLeft: session.Moves.Left,
-            MovesLimit: session.Moves.Limit
+            MovesLimit: session.Moves.Limit,
+            TimeLeft: session.Timer.Remaining,
+            TimeLimit: session.Timer.Limit
         }, () => this.restart(result));
     }
 

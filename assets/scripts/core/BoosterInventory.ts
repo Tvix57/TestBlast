@@ -34,10 +34,6 @@ export class BoosterInventory extends AbstractDispatcher<IBoosterHandler> {
         return true;
     }
 
-    public Reset(): void {
-        this.PostAll();
-    }
-
     private PostAll(): void {
         this._counts.forEach((count, type) => {
             this._dispatcher.Post((handler) => handler.OnBoosterCountChanged(type, count));

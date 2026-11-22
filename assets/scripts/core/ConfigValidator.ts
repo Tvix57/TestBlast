@@ -1,6 +1,7 @@
-import { BoosterTargeting, BoosterType } from './BoosterRules';
+import { BoosterTargeting, BoosterType } from './BoosterTypes';
 import { Cell, CeilType } from './Cell';
-import { IBoosterConfigFile, IFieldConfig, IFieldConfigFile, IGameConfig } from './Config';
+import { IBoosterConfigFile, IEffectConfig, IFieldConfig, IFieldConfigFile, IGameConfig } from './Config';
+import { EffectFactory } from './effects/BoardEffect';
 import { COLOR_TILE_TYPES, SUPER_TILE_TYPES, TileType } from './Tile';
 
 export class ConfigValidator {
@@ -15,6 +16,10 @@ export class ConfigValidator {
         ConfigValidator.requireNumber(config.board, 'board.minGroupSize', config.board && config.board.minGroupSize, 2);
         ConfigValidator.requireRange(config.board, 'board.repeatChance', config.board && config.board.repeatChance, 0, 1);
         ConfigValidator.requireNumber(config.score, 'score.perTile', config.score && config.score.perTile, 1);
+        ConfigValidator.requireNumber(config.score, 'score.groupBonusStartSize', config.score && config.score.groupBonusStartSize, 0);
+        ConfigValidator.requireNumber(config.score, 'score.groupBonusPerTile', config.score && config.score.groupBonusPerTile, 0);
+        ConfigValidator.requireNumber(config.score, 'score.superTileBonus', config.score && config.score.superTileBonus, 0);
+        ConfigValidator.requireNumber(config, 'version', config.version, 1);
         if (!config.board || !config.board.colors || config.board.colors.length < 2) {
             throw new Error('game config: board.colors must contain at least 2 colors');
         }
@@ -24,9 +29,13 @@ export class ConfigValidator {
                     + COLOR_TILE_TYPES.join(', ') + ')');
             }
         });
+        if (new Set(config.board.colors).size !== config.board.colors.length) {
+            throw new Error('game config: board.colors must not contain duplicates');
+        }
         if (!config.shuffle) {
             throw new Error('game config: shuffle section is missing');
         }
+        ConfigValidator.requireInteger(config.shuffle, 'shuffle.maxAttempts', config.shuffle.maxAttempts, 1);
         if (!config.animation) {
             throw new Error('game config: animation section is missing');
         }
@@ -38,6 +47,17 @@ export class ConfigValidator {
     private static validateAnimation(config: IGameConfig): void {
         const animation = config.animation;
         ConfigValidator.requireNumber(animation, 'animation.boardAppearStagger', animation && animation.boardAppearStagger, 0);
+        const numeric = [
+            'swapDuration', 'fallDuration', 'blastDuration', 'blastScale', 'blastStagger',
+            'spawnDuration', 'superSpawnDuration', 'shuffleDuration', 'invalidShakeDuration',
+            'invalidShakeOffset', 'boardAppearDuration'
+        ];
+        numeric.forEach((field) => {
+            ConfigValidator.requireNumber(animation, 'animation.' + field, animation && (animation as any)[field], 0);
+        });
+        if (typeof animation.fallEasing !== 'string' || animation.fallEasing.length === 0) {
+            throw new Error('animation.fallEasing must be a non-empty string');
+        }
     }
 
     private static validateRandom(config: IGameConfig): void {
@@ -77,16 +97,16 @@ export class ConfigValidator {
         }
     }
 
-    public static ValidateFields(configs: IFieldConfigFile): void {
+    public static ValidateFields(configs: IFieldConfigFile, minGroupSize: number = 0): void {
         if (!Array.isArray(configs) || configs.length === 0) {
             throw new Error('field config: list of field variants is empty');
         }
         for (let index = 0; index < configs.length; index++) {
-            ConfigValidator.ValidateField(configs[index], 'field config[' + index + ']');
+            ConfigValidator.ValidateField(configs[index], 'field config[' + index + ']', minGroupSize);
         }
     }
 
-    public static ValidateField(config: IFieldConfig, name: string = 'field config'): void {
+    public static ValidateField(config: IFieldConfig, name: string = 'field config', minGroupSize: number = 0): void {
         ConfigValidator.require(config, name);
         ConfigValidator.requireInteger(config, name + ': rows', config && config.rows, 2);
         ConfigValidator.requireInteger(config, name + ': columns', config && config.columns, 2);
@@ -94,12 +114,56 @@ export class ConfigValidator {
             throw new Error(name + ': custom must be a boolean (false — standard grid, true — board matrix)');
         }
         if (!config.custom) {
+            ConfigValidator.requirePlayableArea(config.rows * config.columns, minGroupSize, name);
             return;
         }
         const board = ConfigValidator.requireBoard(config, name);
         if (ConfigValidator.countPlayable(board) === 0) {
             throw new Error(name + ': board has no playable cells');
         }
+        ConfigValidator.requirePlayableArea(ConfigValidator.largestPlayableArea(board), minGroupSize, name);
+    }
+
+    private static requirePlayableArea(area: number, minGroupSize: number, name: string): void {
+        if (minGroupSize > 1 && area < minGroupSize) {
+            throw new Error(name + ': largest playable area ' + area
+                + ' is smaller than board.minGroupSize ' + minGroupSize);
+        }
+    }
+
+    private static largestPlayableArea(board: number[][]): number {
+        const visited: boolean[][] = board.map((line) => line.map(() => false));
+        let largest = 0;
+        for (let row = 0; row < board.length; row++) {
+            for (let col = 0; col < board[row].length; col++) {
+                if (visited[row][col] || !Cell.CanHoldType(board[row][col])) {
+                    continue;
+                }
+                let size = 0;
+                const queue: number[][] = [[row, col]];
+                visited[row][col] = true;
+                while (queue.length > 0) {
+                    const [currentRow, currentCol] = queue.shift();
+                    size++;
+                    const neighbours = [
+                        [currentRow - 1, currentCol], [currentRow + 1, currentCol],
+                        [currentRow, currentCol - 1], [currentRow, currentCol + 1]
+                    ];
+                    neighbours.forEach(([nextRow, nextCol]) => {
+                        if (!board[nextRow] || board[nextRow][nextCol] === undefined) {
+                            return;
+                        }
+                        if (visited[nextRow][nextCol] || !Cell.CanHoldType(board[nextRow][nextCol])) {
+                            return;
+                        }
+                        visited[nextRow][nextCol] = true;
+                        queue.push([nextRow, nextCol]);
+                    });
+                }
+                largest = Math.max(largest, size);
+            }
+        }
+        return largest;
     }
 
     private static requireBoard(config: IFieldConfig, name: string): number[][] {
@@ -158,6 +222,13 @@ export class ConfigValidator {
         if (!config.boosters || config.boosters.length === 0) {
             throw new Error('booster config: boosters list is empty');
         }
+        ConfigValidator.requireNumber(config, 'booster config: version', config.version, 1);
+        ConfigValidator.requireShapes(config.boosters.filter((item) => item && item.effect)
+            .map((item) => item.effect), 'booster config: boosters[].effect');
+        const types = config.boosters.map((booster) => booster && booster.type).filter((type) => !!type);
+        if (new Set(types).size !== types.length) {
+            throw new Error('booster config: boosters must not contain duplicate types');
+        }
         config.boosters.forEach((booster) => {
             if (!booster.type) {
                 throw new Error('booster config: booster.type is missing');
@@ -181,6 +252,8 @@ export class ConfigValidator {
                     + '" in superTiles.effects (add it to TileType)');
             }
         });
+        ConfigValidator.requireShapes(Object.keys(config.superTiles.effects)
+            .map((type) => config.superTiles.effects[type]), 'booster config: superTiles.effects');
         const spawnRules = config.superTiles.spawnRules || [];
         spawnRules.forEach((rule) => {
             (rule.types || []).forEach((type) => {
@@ -189,6 +262,16 @@ export class ConfigValidator {
                         + '" in superTiles.spawnRules (add it to TileType)');
                 }
             });
+        });
+    }
+
+    private static requireShapes(effects: IEffectConfig[], name: string): void {
+        const known = EffectFactory.KnownShapes();
+        effects.forEach((effect) => {
+            if (!effect || known.indexOf(effect.shape) < 0) {
+                throw new Error(name + ': unknown shape "' + (effect && effect.shape)
+                    + '" (known: ' + known.join(', ') + ')');
+            }
         });
     }
 

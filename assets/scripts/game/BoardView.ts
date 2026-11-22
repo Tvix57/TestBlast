@@ -1,24 +1,16 @@
 import { Board } from '../core/Board';
 import { ICell } from '../core/Cell';
 import { IAnimationConfig } from '../core/Config';
-import { ITurnStep } from '../core/TurnStepType';
+import { ITurnStep } from '../core/TurnResult';
 import { BoardController } from './controllers/BoardController';
 import { IBoardStage } from './IBoardStage';
 import { IBoardView } from './IBoardView';
 import { IBoardZoneSize } from './layout/BoardLayout';
+import { NodeUtil } from './ui/NodeUtil';
 import { TileView } from './TileView';
 
 const { ccclass, property } = cc._decorator;
 
-/**
- * Поле на сцене: Cocos-адаптер контроллера.
- *
- * Вид держит только ссылки префаба, события размеров и пул нод; решения, индексы
- * видов, раскладка и цепочки анимаций — в `BoardController`. Геометрию зоны, рамки
- * и подложки задают `cc.Widget` в префабе BoardZone: размер ноды Board — это уже
- * готовый прямоугольник сетки, без отступов. `GetGridSize`/`GetScale` отдают его
- * контроллеру в единицах зоны, а при изменении размера окна раскладка пересобирается.
- */
 @ccclass
 export class BoardView extends cc.Component implements IBoardView, IBoardStage {
 
@@ -149,7 +141,7 @@ export class BoardView extends cc.Component implements IBoardView, IBoardStage {
                 this.ReleaseTileView(view);
                 return;
             }
-            child.destroy();
+            NodeUtil.Destroy(child);
         });
     }
 

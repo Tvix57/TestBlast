@@ -11,6 +11,7 @@ import { GameSession } from '../assets/scripts/core/GameSession';
 import { Random } from '../assets/scripts/core/Random';
 import { TileType } from '../assets/scripts/core/Tile';
 import { IDialogManager } from '../assets/scripts/game/dialogs/IDialogManager';
+import { IMatchScheduler } from '../assets/scripts/game/controllers/MatchTicker';
 import { ISceneManager, SceneType } from '../assets/scripts/game/scenes/ISceneManager';
 
 const CONFIG_DIR = path.join(__dirname, '../assets/resources/config');
@@ -469,11 +470,41 @@ export function createHudView() {
     };
 }
 
+/** Фейк планировщика: запоминает колбэк, интервал и снятие — без `cc`. */
+export interface ISchedulerFake extends IMatchScheduler {
+    Scheduled: (() => void) | null;
+    Unscheduled: (() => void) | null;
+    Interval: number;
+    ScheduleCount: number;
+    UnscheduleCount: number;
+}
+
+export function createScheduler(): ISchedulerFake {
+    const scheduler: ISchedulerFake = {
+        Scheduled: null,
+        Unscheduled: null,
+        Interval: 0,
+        ScheduleCount: 0,
+        UnscheduleCount: 0,
+        Schedule(callback: () => void, intervalSeconds: number): void {
+            scheduler.Scheduled = callback;
+            scheduler.Interval = intervalSeconds;
+            scheduler.ScheduleCount++;
+        },
+        Unschedule(callback: () => void): void {
+            scheduler.Unscheduled = callback;
+            scheduler.UnscheduleCount++;
+        }
+    };
+    return scheduler;
+}
+
 /** Фейк панели бустеров: порт `IBoostersView` без `cc`. */
 export function createBoostersView() {
     return {
         Bind: jest.fn(),
         SetClickHandler: jest.fn(),
+        SetCount: jest.fn(),
         Select: jest.fn(),
         ClearSelection: jest.fn(),
         PlayUnavailable: jest.fn()

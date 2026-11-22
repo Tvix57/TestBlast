@@ -2,22 +2,26 @@ import { HudController } from '../assets/scripts/game/controllers/HudController'
 import { createGame, createHudView } from './helpers';
 
 describe('HudController: одна подписка на три модели сессии', () => {
-    it('при создании показывает цель, счёт, ходы и время из сессии', () => {
+    it('до Start показывает нули, после Start — лимиты сессии', () => {
         const session = createGame({ seed: 1, movesLimit: 5, timeLimitSeconds: 60, targetScore: 500 });
         const view = createHudView();
 
-        new HudController(view as any, session);
+        new HudController(view, session);
 
         expect(view.SetTarget).toHaveBeenCalledWith(500);
         expect(view.SetScore).toHaveBeenCalledWith(0);
-        expect(view.SetMoves).toHaveBeenCalledWith(5, 5);
+        expect(view.SetMoves).toHaveBeenLastCalledWith(0, 0);
         expect(view.SetTime).toHaveBeenCalledWith(60, 60);
+
+        session.Start();
+
+        expect(view.SetMoves).toHaveBeenLastCalledWith(5, 5);
     });
 
     it('обновляет вид на события счёта, ходов и таймера', () => {
         const session = createGame({ seed: 2, movesLimit: 4, timeLimitSeconds: 60, targetScore: 500 });
         const view = createHudView();
-        new HudController(view as any, session);
+        new HudController(view, session);
         session.Start();
         jest.clearAllMocks();
 
@@ -34,7 +38,7 @@ describe('HudController: одна подписка на три модели се
         const session = createGame({ seed: 3, movesLimit: 2, timeLimitSeconds: 60, targetScore: 500 });
         session.Start();
         const view = createHudView();
-        const hud = new HudController(view as any, session);
+        const hud = new HudController(view, session);
         hud.Dispose();
         jest.clearAllMocks();
 

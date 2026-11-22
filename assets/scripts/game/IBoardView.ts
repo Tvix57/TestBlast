@@ -1,7 +1,7 @@
 import { Board } from '../core/Board';
 import { ICell } from '../core/Cell';
 import { IAnimationConfig } from '../core/Config';
-import { ITurnStep } from '../core/TurnStepType';
+import { ITurnStep } from '../core/TurnResult';
 
 export interface IBoardView {
     Init(board: Board, animation: IAnimationConfig): void;

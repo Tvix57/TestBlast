@@ -6,13 +6,6 @@ export interface IMatchScheduler {
     Unschedule(callback: () => void): void;
 }
 
-/**
- * Ежесекундный тик таймера матча — единственная точка чтения остатка для HUD.
- *
- * Не знает про `cc`: планировщик, источник таймера и приёмники инжектируются, поэтому
- * контроллер покрывается Jest без движка. Матч может смениться (новый уровень или
- * раскладка), поэтому таймер запрашивается функцией на каждом тике, а не хранится.
- */
 export class MatchTicker {
     private static readonly INTERVAL_SECONDS: number = 1;
 
@@ -21,6 +14,7 @@ export class MatchTicker {
     private _onTime: (remainingSeconds: number, limitSeconds: number) => void;
     private _onExpired: () => void;
     private _tick: () => void;
+    private _scheduled: boolean = false;
 
     constructor(
         scheduler: IMatchScheduler,
@@ -41,14 +35,19 @@ export class MatchTicker {
     }
 
     public Start(): void {
-        if (!this.CanTick) {
+        if (!this.CanTick || this._scheduled) {
             return;
         }
+        this._scheduled = true;
         this._scheduler.Schedule(this._tick, MatchTicker.INTERVAL_SECONDS);
         this.Refresh();
     }
 
     public Stop(): void {
+        if (!this._scheduled) {
+            return;
+        }
+        this._scheduled = false;
         this._scheduler.Unschedule(this._tick);
     }
 

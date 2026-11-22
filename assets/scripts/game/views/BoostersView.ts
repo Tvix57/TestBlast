@@ -2,6 +2,7 @@ import { BoosterInventory } from '../../core/BoosterInventory';
 import { BoosterRules, BoosterType } from '../../core/BoosterRules';
 import { IBoostersView } from '../IBoostersView';
 import { BoostersController } from '../controllers/BoostersController';
+import { NodeUtil } from '../ui/NodeUtil';
 import { BoosterButtonView } from './BoosterButtonView';
 
 const { ccclass, property } = cc._decorator;
@@ -43,7 +44,6 @@ export class BoostersView extends cc.Component implements IBoostersView {
             this._buttons.set(booster.type, view);
         });
         this._controller = new BoostersController(this, inventory);
-        inventory.Configure(rules.GetBoosters());
     }
 
     public SetCount(type: BoosterType, count: number): void {
@@ -84,8 +84,8 @@ export class BoostersView extends cc.Component implements IBoostersView {
 
     private clearButtons(): void {
         this._buttons.forEach((view) => {
-            if (view && view.node && view.node.isValid) {
-                view.node.destroy();
+            if (view) {
+                NodeUtil.Destroy(view.node);
             }
         });
         this._buttons.clear();
