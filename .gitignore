@@ -53,6 +53,9 @@ Thumbs.db
 # автотесты
 coverage/
 
+# артефакт GitHub Pages (публикуется в ветку build скриптом pages:publish)
+/docs/
+
 # python
 __pycache__/
 *.pyc
